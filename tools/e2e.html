@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>VOID LANCE e2e</title>
+<canvas id="screen" width="384" height="256"></canvas>
+<pre id="err"></pre>
+<script type="module">
+import { buildSprites } from '../js/sprites.js';
+import { buildBossSprites } from '../js/bosses.js';
+import { AudioEngine } from '../js/audio.js';
+import { Input } from '../js/input.js';
+import { Game } from '../js/game.js';
+import { makeBot } from '../js/bot.js';
+import { killEnemy, spawnEnemy, KINDS } from '../js/enemies.js';
+import { Item, Pod, Bit } from '../js/entities.js';
+
+buildSprites();
+buildBossSprites();
+
+const results = [];
+const bossUpdates = {};
+
+/** 新しいゲーム一式を作る。 */
+function mk(opts = {}) {
+  const audio = new AudioEngine();
+  const input = new Input();
+  const game = new Game(audio, input, opts);
+  return { audio, input, game };
+}
+
+/** n フレーム進める。render>0 なら render フレームごとに描画も行う。 */
+function run(c, n, render = 0) {
+  for (let i = 0; i < n; i++) {
+    c.input.update();
+    c.game.update();
+    if (render && i % render === 0) c.game.render();
+  }
+}
+
+const pending = [];
+
+/** シナリオを実行し結果を記録する(非同期シナリオにも対応)。 */
+function scenario(name, fn) {
+  const idx = results.length;
+  results.push({ name, ok: false, detail: '未完了' });
+  const fail = (e) => { results[idx] = { name, ok: false, detail: String(e && e.stack ? e.stack : e).split('\n').slice(0, 4).join(' | ') }; };
+  try {
+    const r = fn();
+    if (r && typeof r.then === 'function') {
+      pending.push(r.then((d) => { results[idx] = { name, ok: true, detail: d || '' }; }, fail));
+    } else {
+      results[idx] = { name, ok: true, detail: r || '' };
+    }
+  } catch (e) {
+    fail(e);
+  }
+}
+
+function expect(cond, msg) {
+  if (!cond) throw new Error(`期待外れ: ${msg}`);
+}
+
+scenario('S1 タイトル→ゲーム開始(キー入力経由)', () => {
+  const c = mk();
+  run(c, 5);
+  expect(c.game.state === 'title', 'タイトル状態');
+  c.input.keys.add('Enter');
+  run(c, 3);
+  c.input.keys.delete('Enter');
+  expect(c.game.state === 'intro', `introになる: ${c.game.state}`);
+  run(c, 200);
+  expect(c.game.state === 'play', `playになる: ${c.game.state}`);
+  return c.game.state;
+});
+
+scenario('S2 ミス→チェックポイント復帰', () => {
+  const c = mk();
+  c.game.startGame(0);
+  c.input.bot = makeBot(c.game);
+  run(c, 1500);
+  const cp = c.game.stage.checkpoints[c.game.cpIdx];
+  c.game.killPlayer();
+  run(c, 130);
+  expect(c.game.lives === 2, `残機2: ${c.game.lives}`);
+  expect(c.game.player.alive, '復活している');
+  // 死亡演出(110f)後に復帰し、そこから20f分(約12px)スクロールしている
+  expect(c.game.scrollX >= cp && c.game.scrollX - cp < 30, `scrollXがcp付近に戻る: ${c.game.scrollX} vs ${cp}`);
+  return `cp=${cp}`;
+});
+
+scenario('S3 ゲームオーバー→コンティニュー', () => {
+  const c = mk();
+  c.game.startGame(0);
+  const bot = makeBot(c.game);
+  let fire = false;
+  c.input.bot = () => ({ ...bot(), fire, rapid: false });
+  run(c, 300);
+  c.game.lives = 1;
+  c.game.killPlayer();
+  run(c, 130);
+  expect(c.game.state === 'gameover', `gameover: ${c.game.state}`);
+  run(c, 250, 20);
+  fire = true;
+  run(c, 3);
+  fire = false;
+  expect(c.game.state === 'play', `continue後play: ${c.game.state}`);
+  expect(c.game.lives === 3 && c.game.continues === 2, `残機/クレジット: ${c.game.lives}/${c.game.continues}`);
+  return `score=${c.game.score}`;
+});
+
+scenario('S4 ゲームオーバー→タイトル復帰', () => {
+  const c = mk();
+  c.game.startGame(0);
+  c.input.bot = makeBot(c.game);
+  run(c, 300);
+  c.game.lives = 1;
+  c.game.continues = 0;
+  c.game.killPlayer();
+  run(c, 130);
+  run(c, 800, 50);
+  expect(c.game.state === 'title', `title: ${c.game.state}`);
+  return c.game.state;
+});
+
+scenario('S5 ポーズ', () => {
+  const c = mk();
+  c.game.startGame(0);
+  let pulse = false;
+  const bot = makeBot(c.game);
+  c.input.bot = () => ({ ...bot(), pause: pulse });
+  run(c, 200);
+  pulse = true; run(c, 2); pulse = false; run(c, 2);
+  expect(c.game.state === 'pause', `pause: ${c.game.state}`);
+  const x = c.game.scrollX;
+  run(c, 30, 10);
+  expect(c.game.scrollX === x, 'ポーズ中は進まない');
+  pulse = true; run(c, 2); pulse = false; run(c, 2);
+  expect(c.game.state === 'play', `resume: ${c.game.state}`);
+  return c.game.state;
+});
+
+scenario('S6 ステージ遷移→エンディング→タイトル', () => {
+  const c = mk();
+  c.game.startGame(0);
+  c.input.bot = makeBot(c.game);
+  run(c, 100);
+  for (let s = 0; s < 3; s++) {
+    c.game.bossDefeated();
+    run(c, 560, 40);
+    if (s < 2) expect(c.game.stageIdx === s + 1, `ステージ${s + 2}へ: ${c.game.stageIdx}`);
+  }
+  expect(c.game.state === 'ending', `ending: ${c.game.state}`);
+  // ボットの連射ボタンでエンディングが終わらないよう、無入力にしてから確認する
+  c.input.bot = () => ({});
+  run(c, 520, 40);
+  expect(c.game.state === 'ending', `無入力ならendingのまま: ${c.game.state}`);
+  c.input.bot = () => ({ start: true });
+  run(c, 2);
+  expect(c.game.state === 'title', `title: ${c.game.state}`);
+  return c.game.state;
+});
+
+for (const st of [0, 1, 2]) {
+  scenario(`S7-${st + 1} ステージ${st + 1} ボス戦→撃破→クリア(描画込み)`, () => {
+    const c = mk({ god: true });
+    c.game.startGame(st);
+    c.input.bot = makeBot(c.game);
+    let frames = 0;
+    while (c.game.bossPhase !== 'fight' && frames < 12000) { run(c, 1, 6); frames++; }
+    expect(c.game.bossPhase === 'fight', `ボス到達: ${c.game.bossPhase}`);
+    run(c, 900, 3);
+    const boss = c.game.boss;
+    expect(boss && !boss.dead, 'ボス存在');
+    // 部位撃破の経路も確認
+    if (boss.cannons) boss.cannons.forEach((x) => { x.hp = 0; boss.def.onPartDie(boss, x, c.game); });
+    if (boss.turrets) boss.turrets.forEach((x) => { x.hp = 0; boss.def.onPartDie(boss, x, c.game); });
+    if (boss.bays) boss.bays.forEach((x) => { x.hp = 0; boss.def.onPartDie(boss, x, c.game); });
+    run(c, 300, 3);
+    killEnemy(c.game, boss);
+    let k = 0;
+    while (c.game.state !== 'clear' && k < 600) { run(c, 1, 3); k++; }
+    expect(c.game.state === 'clear', `clear: ${c.game.state}`);
+    run(c, 200, 3);
+    return `boss->clear ${k}f`;
+  });
+}
+
+scenario('S8 サウンドテスト遷移', () => {
+  const c = mk();
+  run(c, 5);
+  for (let i = 0; i < 4; i++) { c.input.keys.add('ArrowDown'); run(c, 2); c.input.keys.delete('ArrowDown'); run(c, 2); }
+  expect(c.game.menu === 4, `menu: ${c.game.menu}`);
+  c.input.keys.add('Enter'); run(c, 2); c.input.keys.delete('Enter'); run(c, 2);
+  expect(c.game.state === 'soundtest', `soundtest: ${c.game.state}`);
+  run(c, 10, 2);
+  c.input.keys.add('KeyX'); run(c, 2); c.input.keys.delete('KeyX'); run(c, 2);
+  expect(c.game.state === 'title', `back: ${c.game.state}`);
+  return 'ok';
+});
+
+scenario('S9 全アイテム取得の効果', () => {
+  const c = mk({ god: true });
+  c.game.startGame(0);
+  run(c, 200);
+  const g = c.game;
+  const get = (t) => { g.items.push(new Item(g.player.x, g.player.y, t)); run(c, 2); };
+  for (let i = 0; i < 6; i++) get('speed');
+  expect(g.player.speedLv === 4, `speed: ${g.player.speedLv}`);
+  get('orb'); expect(g.pod && g.player.hasPod, 'pod');
+  get('orb'); get('orb'); expect(g.pod.level === 2, `podLv: ${g.pod.level}`);
+  get('ricochet'); get('ricochet'); get('ricochet');
+  expect(g.player.weapon.type === 'ricochet' && g.player.weapon.level === 3, 'ricochet3');
+  get('piercer'); expect(g.player.weapon.type === 'piercer', 'piercer');
+  get('seeker'); expect(g.player.weapon.type === 'seeker', 'seeker');
+  get('missile'); get('missile'); expect(g.player.missileLv === 2, 'missile');
+  get('bit'); get('bit'); get('bit'); expect(g.bits.length === 2, `bits: ${g.bits.length}`);
+  return JSON.stringify(g.snapshot().player);
+});
+
+scenario('S10 全武器・ビーム全レベル・ポッド操作(描画込み)', () => {
+  const c = mk({ god: true });
+  c.game.startGame(1);
+  const g = c.game;
+  run(c, 200);
+  g.player.hasPod = true; g.pod = new Pod(g);
+  const types = ['ricochet', 'piercer', 'seeker'];
+  const ps = { fire: false, pod: false, rapid: true };
+  const bot = makeBot(g);
+  c.input.bot = () => ({ ...bot(), ...ps });
+  for (const t of types) {
+    for (let lv = 1; lv <= 3; lv++) {
+      g.player.weapon = { type: t, level: lv };
+      g.player.missileLv = 2;
+      g.player.bitCount = 2;
+      if (!g.bits.length) { g.bits.push(new Bit(0, g), new Bit(1, g)); }
+      run(c, 150, 5);
+    }
+  }
+  // 各レベルのビーム
+  for (let lv = 1; lv <= 5; lv++) {
+    g.player.fireBeam(g, lv);
+    run(c, 20, 1);
+  }
+  // 実際のチャージ入力(押しっぱなし→離す)
+  ps.rapid = false;
+  ps.fire = true; run(c, 130, 5);
+  expect(g.player.chargeLv === 5, `chargeLv: ${g.player.chargeLv}`);
+  ps.fire = false; run(c, 5, 1);
+  expect(g.beams.length > 0, 'beam発射');
+  // ポッド発射→回収
+  ps.pod = true; run(c, 2); ps.pod = false; run(c, 60, 5);
+  expect(g.pod.state === 'free', `pod free: ${g.pod.state}`);
+  ps.pod = true; run(c, 2); ps.pod = false; run(c, 60, 5);
+  expect(g.pod.attached, `pod attached: ${g.pod.state}`);
+  return 'ok';
+});
+
+scenario('S11 全敵種の描画・更新', () => {
+  const c = mk({ god: true });
+  c.game.startGame(0);
+  const g = c.game;
+  run(c, 160);
+  g.input.bot = () => ({ rapid: false });
+  g.scrollX = 2600;
+  const kinds = Object.keys(KINDS).filter((k) => !KINDS[k].isBoss);
+  kinds.forEach((k, i) => {
+    spawnEnemy(g, k, 200 + (i % 4) * 40, 60 + Math.floor(i / 4) * 40, { onCeil: i % 2 === 0, ang: 0 });
+  });
+  run(c, 400, 2);
+  return `kinds=${kinds.join(',')}`;
+});
+
+scenario('S13 実キーイベント→Input→初回操作コールバック', () => {
+  const input = new Input();
+  let first = 0;
+  input.attach(document.getElementById('screen'), () => { first++; });
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ' }));
+  input.update();
+  expect(input.down('right') && input.down('fire'), '押下反映');
+  expect(input.pressed('fire'), '立ち上がり検出');
+  input.update();
+  expect(!input.pressed('fire') && input.down('fire'), '押しっぱなしでは立ち上がらない');
+  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyZ' }));
+  input.update();
+  expect(input.released('fire'), '立ち下がり検出');
+  expect(first >= 1, `初回操作コールバック: ${first}`);
+  return `first=${first}`;
+});
+
+scenario('S14 実AudioEngine: 全SE・全BGM・チャージ音のスモーク', async () => {
+  const a = new AudioEngine();
+  a.unlock();
+  expect(a.ctx, 'AudioContext生成');
+  if (a.ctx.state !== 'running') { try { await a.ctx.resume(); } catch (e) { /* 無視 */ } }
+  const names = ['shot', 'shot2', 'enemyShot', 'hit', 'deflect', 'explodeTiny', 'explodeSmall', 'explodeBig', 'playerDeath', 'powerup', 'speedUp', 'extend',
+    'podAttach', 'podLaunch', 'podRecall', 'missile', 'chargeBlip', 'beam', 'warning', 'bossRoar', 'coreOpen', 'laserCharge', 'laserFire', 'tick', 'select', 'start', 'pause'];
+  for (const n of names) { a.sfx(n, 5); }
+  a.startCharge(); for (let lv = 0; lv <= 5; lv++) a.setCharge(lv, 0.5); a.stopCharge();
+  for (const s of ['title', 'stage1', 'stage2', 'stage3', 'boss', 'clear', 'gameover', 'ending']) { a.playSong(s); await new Promise((r) => setTimeout(r, 120)); }
+  a.stopSong(0.1);
+  a.setVolume(0.5); a.toggleMute(); a.toggleMute();
+  return `state=${a.ctx.state}`;
+});
+
+scenario('S12 ボットによる通しプレイ(無敵なし)', () => {
+  const c = mk({ seed: 3 });
+  c.game.startGame(0);
+  c.input.bot = makeBot(c.game);
+  run(c, 20000, 25);
+  return JSON.stringify({ state: c.game.state, stage: c.game.stageIdx + 1, score: c.game.score, lives: c.game.lives });
+});
+
+window.addEventListener('error', (e) => { document.getElementById('err').textContent += `${e.message}\n`; });
+await Promise.all(pending);
+document.body.dataset.report = JSON.stringify(results);
+document.title = results.every((r) => r.ok) ? 'e2e PASS' : 'e2e FAIL';
+try { await fetch('/report/e2e', { method: 'POST', body: JSON.stringify(results) }); } catch (e) { /* サーバー未起動時は無視 */ }
+</script>
+</head>
+<body></body>
+</html>

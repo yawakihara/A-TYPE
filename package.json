@@ -1,0 +1,11 @@
+{
+  "name": "void-lance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VOID LANCE - R-Type系の横スクロールシューティング(全アセット新規制作)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/js/*.test.mjs\"",
+    "serve": "node tools/serve.mjs"
+  }
+}

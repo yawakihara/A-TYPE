@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>VOID LANCE audio check</title>
+<pre id="err"></pre>
+<script type="module">
+import { AudioEngine } from '../js/audio.js';
+import { SONGS } from '../js/music.js';
+
+const SR = 44100;
+const SFX_NAMES = ['shot', 'shot2', 'enemyShot', 'hit', 'deflect', 'explodeTiny', 'explodeSmall', 'explodeBig', 'playerDeath', 'powerup', 'speedUp', 'extend',
+  'podAttach', 'podLaunch', 'podRecall', 'missile', 'chargeBlip', 'beam', 'warning', 'bossRoar', 'coreOpen', 'laserCharge', 'laserFire', 'tick', 'select', 'start', 'pause'];
+
+/** 描画結果の統計値(ピーク・RMS・クリップ率・NaN有無・無音率)を求める。 */
+function analyze(buf) {
+  let peak = 0;
+  let sum = 0;
+  let clip = 0;
+  let bad = 0;
+  let quiet = 0;
+  let n = 0;
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < d.length; i++) {
+      const v = d[i];
+      if (!Number.isFinite(v)) { bad++; continue; }
+      const a = Math.abs(v);
+      if (a > peak) peak = a;
+      if (a >= 0.999) clip++;
+      if (a < 0.0005) quiet++;
+      sum += v * v;
+      n++;
+    }
+  }
+  return { peak: +peak.toFixed(3), rms: +Math.sqrt(sum / n).toFixed(4), clipPct: +((clip / n) * 100).toFixed(3), nan: bad, quietPct: +((quiet / n) * 100).toFixed(1), sec: +(buf.length / buf.sampleRate).toFixed(1) };
+}
+
+/** 1曲または1効果音をオフラインで描画する。 */
+async function render(kind, name) {
+  const dur = kind === 'song' ? null : 2.5;
+  let engine = new AudioEngine();
+  let seconds = dur;
+  if (kind === 'song') {
+    const def = SONGS[name];
+    const loops = def.loop === false ? 1 : 1;
+    seconds = (def.steps * loops * 60) / def.bpm / 4 + 1.5;
+  }
+  const ctx = new OfflineAudioContext(2, Math.ceil(SR * seconds), SR);
+  engine.initContext(ctx);
+  if (kind === 'song') engine.scheduleSong(name, 1);
+  else engine.sfxAt(name, 0.05, 3);
+  const buf = await ctx.startRendering();
+  return analyze(buf);
+}
+
+const report = { songs: {}, sfx: {} };
+try {
+  for (const name of Object.keys(SONGS)) report.songs[name] = await render('song', name);
+  for (const name of SFX_NAMES) report.sfx[name] = await render('sfx', name);
+} catch (e) {
+  document.getElementById('err').textContent = String(e && e.stack ? e.stack : e);
+}
+document.body.dataset.report = JSON.stringify(report);
+document.title = 'audio done';
+try { await fetch('/report/audio', { method: 'POST', body: JSON.stringify(report) }); } catch (e) { /* サーバー未起動時は無視 */ }
+</script>
+</head>
+<body></body>
+</html>

@@ -1,11 +1,17 @@
 {
-  "name": "void-lance",
-  "version": "0.1.0",
+  "name": "aegis-lance",
+  "version": "1.0.0",
   "private": true,
-  "description": "VOID LANCE - R-Type系の横スクロールシューティング(全アセット新規制作)",
+  "description": "AEGIS LANCE - 80年代アーケード横スクロールSTGのルールを忠実に再現した、全アセット新規制作のブラウザーゲーム",
   "type": "module",
   "scripts": {
-    "test": "node --test \"tests/js/*.test.mjs\"",
-    "serve": "node tools/serve.mjs"
+    "dev": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "test": "node --test tests/unit/*.test.mjs",
+    "e2e": "node tests/e2e/run.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "playwright": "1.56.1"
   }
 }

@@ -1,70 +1,114 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>VOID LANCE audio check</title>
-<pre id="err"></pre>
+<title>audio check</title>
+</head>
+<body>
+<pre id="out"></pre>
 <script type="module">
-import { AudioEngine } from '../js/audio.js';
-import { SONGS } from '../js/music.js';
+import { AudioEngine } from '../src/audio/audio.js';
+import { SONGS } from '../src/audio/songs/index.js';
+import { SFX } from '../src/audio/sfx.js';
 
+const params = new URLSearchParams(location.search);
+const kit = params.get('kit') || 'remastered';
+const which = params.get('song');
+const sfxMode = params.get('sfx') === '1';
 const SR = 44100;
-const SFX_NAMES = ['shot', 'shot2', 'enemyShot', 'hit', 'deflect', 'explodeTiny', 'explodeSmall', 'explodeBig', 'playerDeath', 'powerup', 'speedUp', 'extend',
-  'podAttach', 'podLaunch', 'podRecall', 'missile', 'chargeBlip', 'beam', 'warning', 'bossRoar', 'coreOpen', 'laserCharge', 'laserFire', 'tick', 'select', 'start', 'pause'];
 
-/** 描画結果の統計値(ピーク・RMS・クリップ率・NaN有無・無音率)を求める。 */
-function analyze(buf) {
-  let peak = 0;
-  let sum = 0;
-  let clip = 0;
-  let bad = 0;
-  let quiet = 0;
-  let n = 0;
-  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
-    const d = buf.getChannelData(ch);
-    for (let i = 0; i < d.length; i++) {
+function wav(buf) {
+  const ch = buf.numberOfChannels;
+  const len = buf.length;
+  const data = new DataView(new ArrayBuffer(44 + len * ch * 2));
+  const w = (o, s) => [...s].forEach((c, i) => data.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); data.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  data.setUint32(16, 16, true); data.setUint16(20, 1, true); data.setUint16(22, ch, true);
+  data.setUint32(24, SR, true); data.setUint32(28, SR * ch * 2, true); data.setUint16(32, ch * 2, true);
+  data.setUint16(34, 16, true); w(36, 'data'); data.setUint32(40, len * ch * 2, true);
+  const chans = [...Array(ch).keys()].map((c) => buf.getChannelData(c));
+  let o = 44;
+  for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { data.setInt16(o, Math.max(-1, Math.min(1, chans[c][i])) * 32767, true); o += 2; }
+  return new Uint8Array(data.buffer);
+}
+
+function b64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+function stats(buf) {
+  let peak = 0, sum = 0, clip = 0, nan = 0, silent = 0;
+  const n = buf.length;
+  const block = SR / 10;
+  let blk = 0, blkMax = 0;
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < n; i++) {
       const v = d[i];
-      if (!Number.isFinite(v)) { bad++; continue; }
+      if (Number.isNaN(v)) { nan++; continue; }
       const a = Math.abs(v);
       if (a > peak) peak = a;
-      if (a >= 0.999) clip++;
-      if (a < 0.0005) quiet++;
+      if (a > 0.99) clip++;
       sum += v * v;
-      n++;
+      if (c === 0) { blkMax = Math.max(blkMax, a); if (++blk >= block) { if (blkMax < 0.002) silent++; blk = 0; blkMax = 0; } }
     }
   }
-  return { peak: +peak.toFixed(3), rms: +Math.sqrt(sum / n).toFixed(4), clipPct: +((clip / n) * 100).toFixed(3), nan: bad, quietPct: +((quiet / n) * 100).toFixed(1), sec: +(buf.length / buf.sampleRate).toFixed(1) };
+  const rms = Math.sqrt(sum / (n * buf.numberOfChannels));
+  return { peak: +peak.toFixed(3), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), clipPct: +((clip / (n * 2)) * 100).toFixed(3), nan, silentBlocks: silent, sec: +(n / SR).toFixed(1) };
 }
 
-/** 1曲または1効果音をオフラインで描画する。 */
-async function render(kind, name) {
-  const dur = kind === 'song' ? null : 2.5;
-  let engine = new AudioEngine();
-  let seconds = dur;
-  if (kind === 'song') {
-    const def = SONGS[name];
-    const loops = def.loop === false ? 1 : 1;
-    seconds = (def.steps * loops * 60) / def.bpm / 4 + 1.5;
-  }
-  const ctx = new OfflineAudioContext(2, Math.ceil(SR * seconds), SR);
-  engine.initContext(ctx);
-  if (kind === 'song') engine.scheduleSong(name, 1);
-  else engine.sfxAt(name, 0.05, 3);
+async function renderSong(name) {
+  const probe = new AudioEngine();
+  const def = SONGS[name];
+  // compile to know the length
+  const ctx0 = new OfflineAudioContext(2, SR, SR);
+  probe.init(ctx0);
+  const song = probe.getSong(name);
+  const secs = (song.length * 60) / def.bpm / 48 + 2.5;
+  const ctx = new OfflineAudioContext(2, Math.ceil(secs * SR), SR);
+  const eng = new AudioEngine();
+  eng.kit = kit;
+  eng.init(ctx);
+  eng.renderSong(name, 1);
   const buf = await ctx.startRendering();
-  return analyze(buf);
+  return buf;
 }
 
-const report = { songs: {}, sfx: {} };
-try {
-  for (const name of Object.keys(SONGS)) report.songs[name] = await render('song', name);
-  for (const name of SFX_NAMES) report.sfx[name] = await render('sfx', name);
-} catch (e) {
-  document.getElementById('err').textContent = String(e && e.stack ? e.stack : e);
+async function renderSfx() {
+  const names = Object.keys(SFX);
+  const ctx = new OfflineAudioContext(2, SR * (names.length * 1.2 + 4), SR);
+  const eng = new AudioEngine();
+  eng.kit = kit;
+  eng.init(ctx);
+  names.forEach((n, i) => eng.sfxAt(n, 0.1 + i * 1.2, 5));
+  return { buf: await ctx.startRendering(), names };
 }
-document.body.dataset.report = JSON.stringify(report);
-document.title = 'audio done';
-try { await fetch('/report/audio', { method: 'POST', body: JSON.stringify(report) }); } catch (e) { /* サーバー未起動時は無視 */ }
+
+(async () => {
+  const out = {};
+  try {
+    if (sfxMode) {
+      const { buf, names } = await renderSfx();
+      out.sfx = stats(buf);
+      out.names = names;
+      window.__wav = b64(wav(buf));
+    } else {
+      const names = which ? [which] : Object.keys(SONGS);
+      for (const n of names) {
+        const buf = await renderSong(n);
+        out[n] = stats(buf);
+        if (which) window.__wav = b64(wav(buf));
+      }
+    }
+  } catch (e) {
+    out.error = String(e.stack || e);
+  }
+  document.getElementById('out').textContent = JSON.stringify(out, null, 1);
+  window.__stats = out;
+  document.title = 'done';
+})();
 </script>
-</head>
-<body></body>
+</body>
 </html>

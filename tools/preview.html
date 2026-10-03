@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sprite preview</title>
+<style>
+  body { margin: 0; background: #0a0d16; color: #ccd; font: 12px monospace; }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="hd"></canvas>
+<canvas id="px"></canvas>
+<script type="module">
+import '../src/gfx/art/index.js';
+import { SpriteCache, spriteNames, spriteDef } from '../src/gfx/sprites.js';
+
+const params = new URLSearchParams(location.search);
+const filter = params.get('only');
+const names = spriteNames().filter((n) => !filter || n.startsWith(filter));
+
+function sheet(id, S, arcade, zoom) {
+  const cache = new SpriteCache();
+  cache.reset(S, arcade);
+  const items = [];
+  for (const n of names) {
+    const d = spriteDef(n);
+    const frames = Math.min(d.frames, Number(params.get('frames') || 8));
+    for (let f = 0; f < frames; f++) items.push({ n, f, e: cache.get(n, f), d });
+  }
+  const cols = Number(params.get('cols') || 10);
+  const cellW = Math.max(...items.map((i) => i.e.c.width)) + 8;
+  const cellH = Math.max(...items.map((i) => i.e.c.height)) + 18;
+  const c = document.getElementById(id);
+  const rows = Math.ceil(items.length / cols);
+  c.width = cols * cellW * zoom;
+  c.height = rows * cellH * zoom;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = params.get('bg') || '#1b2133';
+  g.fillRect(0, 0, c.width, c.height);
+  items.forEach((it, i) => {
+    const x = (i % cols) * cellW * zoom;
+    const y = Math.floor(i / cols) * cellH * zoom;
+    g.fillStyle = (i % 2) ? '#141a29' : '#182036';
+    g.fillRect(x, y, cellW * zoom, cellH * zoom);
+    g.drawImage(it.e.c, x + 4 * zoom, y + 14 * zoom, it.e.c.width * zoom, it.e.c.height * zoom);
+    g.fillStyle = '#8fa';
+    g.font = `${10}px monospace`;
+    g.fillText(`${it.n}:${it.f}`, x + 3, y + 11);
+  });
+}
+sheet('hd', Number(params.get('s') || 4), false, 1);
+sheet('px', 1, true, Number(params.get('z') || 4));
+document.title = 'ready';
+</script>
+</body>
+</html>

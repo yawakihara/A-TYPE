@@ -38,6 +38,15 @@ function shadePixels(px, f) {
   return c;
 }
 
+/**
+ * Tileable fBm at roughly `scale` texels per lattice cell. The lattice count is snapped to an
+ * integer so one tile spans whole periods and the texture wraps without a seam.
+ */
+function tfbm(u, v, scale, oct, seed, ox = 0, oy = 0) {
+  const n = Math.max(1, Math.round(TEX / scale));
+  return fbm((u / TEX) * n + ox, (v / TEX) * n + oy, oct, n, seed);
+}
+
 const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const scalec = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 
@@ -143,7 +152,7 @@ function hull(S, pal) {
   // grime overlay (low-res noise multiplied in)
   const gp = Math.min(px, Math.round(TEX * Math.min(S, 2)));
   const noise = shadePixels(gp, (u, v) => {
-    const n = fbm(u / 16, v / 16, 4, TEX / 16, 3);
+    const n = tfbm(u, v, 16, 4, 3);
     const k = 0.75 + n * 0.5;
     return [255 * k, 255 * k, 255 * k];
   });
@@ -169,14 +178,14 @@ function flesh(S, pal) {
     const [f1, f2, id] = voronoi(sx, sy, cellsPer, pal.seed || 1, 0.95);
     const edge = f2 - f1;
     const bulge = Math.max(0, 1 - f1 * 1.5);
-    const n = fbm(u / 10, v / 10, 3, TEX / 10, 5);
+    const n = tfbm(u, v, 10, 3, 5);
     let col = mixc(scalec(base, 0.6 + hash2(id, 3) * 0.5), hi, bulge * bulge * 0.55);
     col = scalec(col, 0.75 + n * 0.5);
     // dark crevices between cells
     const crev = Math.min(1, edge * 7);
     col = mixc(rim, col, crev);
     // veins
-    const vn = Math.abs(fbm(u / 22 + 3, v / 22, 3, TEX / 22, 9) - 0.5);
+    const vn = Math.abs(tfbm(u, v, 22, 3, 9, 3) - 0.5);
     if (vn < 0.03) col = mixc(col, scalec(rim, 0.5), 1 - vn / 0.03);
     // spores
     if (hash2(id, 77) < 0.12 && f1 < 0.12) col = mixc(col, glow, 1 - f1 / 0.12);
@@ -187,20 +196,52 @@ function flesh(S, pal) {
   return c;
 }
 
-/** Ribbed bone/chitin. */
+/**
+ * Ribbed bone: rounded ribs of varying thickness with vertebral knuckles, lit from the upper
+ * left, separated by occluded, glistening flesh and sinew.
+ */
 function bone(S, pal) {
   const rs = Math.min(S, 2.5);
   const px = Math.round(TEX * rs);
   const b = hexToRgb(pal.bone);
   const d = hexToRgb(pal.dark);
   const f = hexToRgb(pal.flesh);
+  const RIBS = 6;
+  const SEG = 4;
   return shadePixels(px, (u, v) => {
-    const rib = Math.sin((u / TEX) * Math.PI * 2 * 6 + fbm(u / 20, v / 20, 2, TEX / 20, 4) * 3);
-    const n = fbm(u / 12, v / 12, 4, TEX / 12, 2);
-    const t = rib * 0.5 + 0.5;
-    let col = t > 0.55 ? mixc(b, scalec(b, 0.6), 1 - (t - 0.55) / 0.45) : mixc(f, d, 1 - t / 0.55);
-    col = scalec(col, 0.7 + n * 0.6);
-    if (t > 0.9) col = mixc(col, [255, 245, 225], (t - 0.9) * 4);
+    const uw = (u / TEX) * RIBS + (tfbm(u, v, 20, 2, 4) - 0.5) * 0.7;
+    const cell = Math.floor(uw);
+    const k = ((cell % RIBS) + RIBS) % RIBS;
+    const fx = uw - cell;
+    // knuckles along each rib, staggered per rib
+    const sv = (((v / TEX) * SEG + hash2(k, 9)) % 1 + 1) % 1;
+    const joint = Math.exp(-(((sv - 0.5) / 0.07) ** 2));
+    const half = (0.26 + hash2(k, 3) * 0.12) * (1 + joint * 0.22);
+    const x = (fx - 0.5) / half;
+    const n = tfbm(u, v, 12, 4, 2);
+    if (Math.abs(x) < 1) {
+      const cyl = Math.sqrt(1 - x * x);
+      let col = scalec(b, (0.5 + n * 0.4) * (0.3 + cyl * 0.62 - x * 0.16));
+      // knuckle ridge: a darker groove with a lit lip
+      const g = Math.abs(sv - 0.5);
+      if (g < 0.02) col = scalec(col, 0.55);
+      else if (g < 0.045 && sv < 0.5) col = mixc(col, [255, 240, 214], 0.18 * cyl);
+      // porous pitting
+      const pit = tfbm(u, v, 3, 2, 31);
+      if (pit > 0.72) col = scalec(col, 1 - (pit - 0.72) * 1.6);
+      // specular streak along the lit side
+      if (x < -0.2 && x > -0.55) col = mixc(col, [255, 246, 226], (1 - Math.abs(x + 0.38) / 0.17) * 0.28 * cyl);
+      return col;
+    }
+    // flesh between ribs, occluded towards the bone
+    const gap = (Math.abs(x) - 1) * half;
+    const ao = Math.min(1, gap / 0.14);
+    let col = scalec(mixc(d, f, 0.25 + n * 0.75), 0.3 + ao * 0.7);
+    // sinew strands crossing the gap
+    const sinew = Math.abs(tfbm(u, v, 9, 2, 17, 0, 7) - 0.5);
+    if (sinew < 0.035) col = mixc(col, scalec(f, 1.6), (1 - sinew / 0.035) * 0.55 * ao);
+    // wet glints
+    if (n > 0.68 && ao > 0.6) col = mixc(col, [255, 170, 150], (n - 0.68) * 1.4);
     return col;
   });
 }
@@ -214,8 +255,8 @@ function foundry(S, pal) {
   const rust = hexToRgb(pal.rust);
   const steel = hexToRgb(pal.steel);
   const noise = shadePixels(Math.round(TEX * rs), (u, v) => {
-    const n = fbm(u / 14, v / 14, 5, TEX / 14, 8);
-    const r2 = fbm(u / 30 + 5, v / 30, 3, TEX / 30, 2);
+    const n = tfbm(u, v, 14, 5, 8);
+    const r2 = tfbm(u, v, 30, 3, 2, 5);
     const col = mixc(steel, rust, Math.max(0, Math.min(1, (r2 - 0.45) * 3)));
     return scalec(col, 0.65 + n * 0.6);
   });
@@ -255,7 +296,7 @@ function core(S, pal) {
   const vein = hexToRgb(pal.vein);
   return shadePixels(px, (u, v) => {
     const [f1, f2, id] = voronoi((u / TEX) * 6, (v / TEX) * 6, 6, 4, 0.8);
-    const n = fbm(u / 9, v / 9, 4, TEX / 9, 12);
+    const n = tfbm(u, v, 9, 4, 12);
     const machine = hash2(id, 5) < 0.35;
     let col;
     if (machine) {
@@ -278,7 +319,7 @@ function rock(S, pal) {
   const a = hexToRgb(pal.a);
   const b = hexToRgb(pal.b);
   return shadePixels(px, (u, v) => {
-    const n = fbm(u / 18, v / 18, 5, TEX / 18, 21);
+    const n = tfbm(u, v, 18, 5, 21);
     const [f1, f2] = voronoi((u / TEX) * 5, (v / TEX) * 5, 5, 9, 1);
     const crack = Math.min(1, (f2 - f1) * 10);
     return scalec(mixc(a, b, n), 0.45 + crack * 0.6);

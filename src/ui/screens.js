@@ -358,8 +358,9 @@ export class MusicScene extends Screen {
     }
     const cur = this.playing ? SONG_LIST.find((s) => s[0] === this.playing)[1] : '—';
     text(r, g.L(STR.nowPlaying), 287, 54, { align: 'center', font: jp(g), size: 7.5, color: '#7f8ca8' });
-    text(r, cur, 287, 64, { align: 'center', font: 'ui', size: 8, color: '#ffffff' });
-    text(r, g.L('ALL TRACKS ORIGINAL · SYNTHESISED LIVE', '全曲オリジナル・リアルタイム合成'), 287, 188, { align: 'center', font: jp(g), size: 7, color: '#6a7898' });
+    text(r, cur, 287, 64, { align: 'center', font: 'ui', size: 8, color: '#ffffff', maxW: 140 });
+    text(r, g.L('ALL TRACKS ORIGINAL', '全曲オリジナル'), 287, 182, { align: 'center', font: jp(g), size: 7, color: '#6a7898', maxW: 140 });
+    text(r, g.L('SYNTHESISED LIVE', 'リアルタイム合成'), 287, 191, { align: 'center', font: jp(g), size: 7, color: '#6a7898', maxW: 140 });
     footer(r, g, g.L('↑↓ SELECT   ENTER PLAY/STOP   ←→ SOUND SET   ESC BACK', '↑↓ 選択   ENTER 再生/停止   ←→ 音源切替   ESC 戻る'));
     fadeIn(r, this.t, 12);
   }
@@ -456,14 +457,19 @@ export class CreditsScene extends Screen {
     this.drawBase(r);
     header(r, g, g.L(STR.credits));
     panel(r, 40, 48, W - 80, 156);
-    CREDITS.forEach(([a, b], i) => {
-      const y = 56 + i * 13;
+    const col = 152;
+    CREDITS.forEach(([a, b, full], i) => {
+      const y = 56 + i * 12.4;
       if (i === 0) {
         text(r, a, W / 2, y, { align: 'center', font: 'ui', size: 11, weight: 800, color: '#ffffff', glow: '#3ff0ff', spacing: 2 });
         return;
       }
-      if (a) text(r, a, W / 2 - 6, y, { align: 'right', font: 'ui', size: 7.5, color: '#7f8ca8' });
-      if (b) text(r, b, a ? W / 2 + 6 : W / 2, y, { align: a ? 'left' : 'center', font: 'ui', size: 8, color: '#d8e4f8' });
+      if (full) {
+        text(r, b, W / 2, y, { align: 'center', font: 'ui', size: 7.5, color: '#9fb0cc', maxW: W - 96 });
+        return;
+      }
+      if (a) text(r, a, col - 6, y, { align: 'right', font: 'ui', size: 7.5, color: '#7f8ca8', maxW: col - 54 });
+      if (b) text(r, b, col + 6, y, { font: 'ui', size: 8, color: '#d8e4f8', maxW: W - 48 - col - 6 });
     });
     footer(r, g, g.L('ENTER/ESC BACK', 'ENTER/ESC 戻る'));
     fadeIn(r, this.t, 12);

@@ -51,7 +51,7 @@ export class Shot extends Proj {
     this.x += this.vx + w.dx;
     this.y += this.vy;
     if (this.offscreen(w)) this.dead = true;
-    else if (w.terrain.solidAt(this.x + 3, this.y)) {
+    else if (w.shotSolid(this.x + 3, this.y)) {
       this.dead = true;
       w.terrain.damageAt(this.x + 3, this.y, 1, w);
       w.fx.hit(this.x + 2, this.y, '#ffe08a');
@@ -90,7 +90,7 @@ export class Pellet extends Proj {
     this.x += this.vx + w.dx;
     this.y += this.vy;
     if (this.offscreen(w)) this.dead = true;
-    else if (w.terrain.solidAt(this.x, this.y)) {
+    else if (w.shotSolid(this.x, this.y)) {
       this.dead = true;
       w.terrain.damageAt(this.x, this.y, this.dmg, w);
       w.fx.hit(this.x, this.y, '#ffc070');
@@ -159,7 +159,7 @@ export class Beam extends Proj {
       for (let s = 0; s <= this.speed; s += 3) {
         const hx = this.x + s;
         for (const oy of [0, -this.th * 0.35, this.th * 0.35]) {
-          if (w.terrain.solidAt(hx, this.y + oy)) {
+          if (w.shotSolid(hx, this.y + oy)) {
             if (w.terrain.damageAt(hx, this.y + oy, this.dmg * 2, w, true)) continue;
             this.blocked = true;
             this.x = hx;
@@ -196,7 +196,8 @@ export class Beam extends Proj {
   }
 
   onHit(w, res, e) {
-    if (res === 'kill') {
+    // fragments born inside the beam (splitting cells) don't extend the chain
+    if (res === 'kill' && !e.noChain) {
       this.kills++;
       if (this.kills >= 2) w.beamChain(this.kills, e.x, e.y);
     }
@@ -341,7 +342,7 @@ export class Helix extends Proj {
     if (Math.abs(this.x - this.x0) >= this.maxLen) this.x0 = this.tailX;
     const sx = this.tailX - w.camX;
     if (sx < -100 || sx > W + 100) this.dead = true;
-    if (w.terrain.solidAt(this.x, this.y)) {
+    if (w.shotSolid(this.x, this.y)) {
       w.terrain.damageAt(this.x, this.y, this.dmg, w);
       w.fx.sparks(this.x, this.y, 3, '#ff9aa8', 2, 10);
       this.dead = true;
@@ -435,10 +436,10 @@ export class Prism extends Proj {
     for (let s = 0; s < steps; s++) {
       const nx = this.x + this.vx / steps;
       const ny = this.y + this.vy / steps;
-      if (w.terrain.solidAt(nx, ny)) {
+      if (w.shotSolid(nx, ny)) {
         w.terrain.damageAt(nx, ny, this.dmg, w);
-        const hitX = w.terrain.solidAt(nx, this.y);
-        const hitY = w.terrain.solidAt(this.x, ny);
+        const hitX = w.shotSolid(nx, this.y);
+        const hitY = w.shotSolid(this.x, ny);
         if (hitY || !hitX) this.vy = -this.vy;
         if (hitX) this.vx = -this.vx;
         this.bounces--;
@@ -641,7 +642,7 @@ export class Missile extends Proj {
     this.y += Math.sin(this.a) * this.sp;
     if (w.t % 2 === 0) w.fx.add(P.SMOKE, this.x - Math.cos(this.a) * 5, this.y - Math.sin(this.a) * 5, 0, 0, 16, 1.6, '#8a8a90', { grow: 0.12, rel: true, add: false });
     if (this.offscreen(w, 30) || this.t > 160) this.dead = true;
-    else if (w.terrain.solidAt(this.x, this.y)) {
+    else if (w.shotSolid(this.x, this.y)) {
       w.terrain.damageAt(this.x, this.y, 2, w);
       w.fx.explosion(this.x, this.y, 0.35);
       this.dead = true;

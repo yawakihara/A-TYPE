@@ -16,7 +16,7 @@ const GAP = 17;
 class CoilWyrm extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'COIL WYRM' });
-    this.setHp(820);
+    this.setHp(640);
     this.score = 90000;
     this.organic = true;
     this.x = w.camX + W + 60;
@@ -25,7 +25,7 @@ class CoilWyrm extends Boss {
     this.trail = [];
     for (let i = 0; i < SEGS * GAP + 10; i++) this.trail.push([this.x + i * 0.5, this.y + i * 0.6]);
     this.jaw = 0;
-    this.nodes = [4, 8, 12].map((i) => ({ i, hp: 26 * w.diff.hp, dead: false, flash: 0 }));
+    this.nodes = [3, 6, 9, 12].map((i) => ({ i, hp: 22 * w.diff.hp, dead: false, flash: 0 }));
     this.pattern = 'eight';
     this.pt = 0;
     this.dieLen = 260;
@@ -45,7 +45,7 @@ class CoilWyrm extends Boss {
     const b = [];
     const ha = this.a;
     // mouth (only while the jaw is open)
-    if (this.jaw > 0.6) b.push({ x: this.x + Math.cos(ha) * 22, y: this.y + Math.sin(ha) * 22 + 4, hw: 11, hh: 9, type: 'weak', mul: 1 });
+    if (this.jaw > 0.6) b.push({ x: this.x + Math.cos(ha) * 22, y: this.y + Math.sin(ha) * 22 + 4, hw: 14, hh: 12, type: 'weak', mul: 1.5 });
     for (const n of this.nodes) {
       if (n.dead) continue;
       const s = this.seg(n.i);
@@ -72,7 +72,7 @@ class CoilWyrm extends Boss {
     const s = this.seg(n.i);
     w.fx.explosion(s[0], s[1], 1.6, { organic: true });
     w.addScore(4000, s[0], s[1]);
-    this.hp -= 80 * w.diff.hp;
+    this.hp -= 90 * w.diff.hp;
     this.flashT = 6;
     w.sfx('explodeL');
     w.r.shake(0.35);
@@ -109,7 +109,8 @@ class CoilWyrm extends Boss {
     const ph = this.phase;
     this.pt++;
     const T = this.target();
-    const speed = this.state === 'enter' ? 2.4 : ph === 3 ? 2.7 : ph === 2 ? 2.4 : 2.1;
+    const base = this.state === 'enter' ? 2.4 : ph === 3 ? 2.7 : ph === 2 ? 2.4 : 2.1;
+    const speed = this.state === 'breath' ? base * 0.45 : base;
     const turn = this.pattern === 'dive' ? 0.07 : 0.05;
     this.a = turnToward(this.a, Math.atan2(T.y - this.y, T.x - this.x), turn);
     this.x += Math.cos(this.a) * speed + w.dx;

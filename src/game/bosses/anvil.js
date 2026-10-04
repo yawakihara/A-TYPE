@@ -15,7 +15,7 @@ const RAIL_Y = 38;
 class Anvil extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'ANVIL' });
-    this.setHp(680);
+    this.setHp(480);
     this.score = 80000;
     this.x = w.camX + W + 120;
     this.y = PH / 2;
@@ -111,7 +111,7 @@ class Anvil extends Boss {
         this.hy = lerp(this.hy, RAIL_Y, 0.15);
         this.hx = clamp(this.hx + clamp(p.x - this.hx, -2.4, 2.4) * (ph === 2 ? 1.25 : 1), minX, maxX);
         if (ph === 2 && this.st % 120 === 50) for (const s of [-1, 1]) w.spawnR('welder', 10, PH / 2 + s * 50, { stopX: 260 });
-        if (this.st > (ph === 2 ? 60 : 90)) {
+        if (this.st > (ph === 2 ? 55 : 70)) {
           this.setState('warn');
           w.sfx('coreOpen');
         }
@@ -144,7 +144,7 @@ class Anvil extends Boss {
       case 'lift':
         this.hy = lerp(this.hy, RAIL_Y, 0.06);
         if (this.st > 40) {
-          if (this.slams >= 2) {
+          if (this.slams >= (ph === 2 ? 1 : 2)) {
             this.slams = 0;
             this.setState('vent');
             w.sfx('coreOpen');

@@ -114,6 +114,15 @@ export class World {
     this.phase = 'play';
     this.phaseT = 0;
     if (this.stage.onRestart) this.stage.onRestart(this, cx);
+    // as in the arcade original, a restart point is soon followed by an armour bringing AEGIS back
+    if ((!first || this.cpIdx > 0) && !this.pod) {
+      this.after(120, () => {
+        if (this.phase !== 'play' || this.pod) return;
+        const x = this.camX + W + 20;
+        const y = clamp((this.terrain.ceilAt(x) + this.terrain.floorAt(x)) / 2, 40, PH - 40);
+        this.spawn('carrier', x, y, { fly: true, drop: ITEM.CRYSTAL });
+      });
+    }
     if (!first) this.game.music(this.stage.music);
   }
 
@@ -265,10 +274,11 @@ export class World {
     this.sfx('blockBreak');
   }
 
+  /** One more kill by the same LANCE: pay the step up to the chain's total bonus. */
   beamChain(n, x, y) {
-    const bonus = [0, 0, 1000, 2000, 4000, 8000, 16000][Math.min(6, n)] || 16000;
-    this.addScore(bonus);
-    this.popText(x, y - 14, `CHAIN ×${n}  +${bonus}`, '#7ff4ff', 70);
+    const total = (k) => (k < 2 ? 0 : Math.min(30000, [0, 0, 1000, 3000, 6000, 10000, 16000][k] ?? 16000 + (k - 6) * 2000));
+    this.addScore(total(n) - total(n - 1));
+    this.popText(x, y - 14, `CHAIN ×${n}  +${total(n)}`, '#7ff4ff', 70);
     this.stats.bestChain = Math.max(this.stats.bestChain, n);
     this.game.medalEvent('chain', n);
   }
@@ -492,6 +502,29 @@ export class World {
   }
 
   // ------------------------------------------------------------------ collisions
+
+  /**
+   * Terrain test for player projectiles. Static terrain and blocks always stop them, but a
+   * solid contributed by an enemy never shields that enemy's own exposed (body/weak) hitboxes,
+   * so shots always reach a part that is drawn in front of its machinery.
+   */
+  shotSolid(x, y) {
+    const T = this.terrain;
+    if (!T.solidAt(x, y)) return false;
+    if (y < T.ceilAt(x) || y > T.floorAt(x)) return true;
+    for (const b of T.vis) if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return true;
+    for (const d of T.dyn) {
+      if (Math.abs(x - d.x) >= d.hw || Math.abs(y - d.y) >= d.hh) continue;
+      const e = d.owner;
+      if (!e || e.dead || !e.boxes) return true;
+      for (const b of e.boxes()) {
+        if (b.noShot || (b.part && b.part.dead) || (b.type !== 'body' && b.type !== 'weak')) continue;
+        if (Math.abs(x - b.x) <= b.hw + 4 && Math.abs(y - b.y) <= b.hh + 4) return false;
+      }
+      return true;
+    }
+    return false;
+  }
 
   collide() {
     const p = this.player;

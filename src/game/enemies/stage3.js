@@ -355,7 +355,7 @@ register('engine', Engine);
 class Tower extends Enemy {
   constructor(w, x, y, opt) {
     super(w, x, y, opt);
-    this.setHp(180);
+    this.setHp(140);
     this.score = 15000;
     this.rel = false;
     this.cull = false;

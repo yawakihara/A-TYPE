@@ -80,6 +80,12 @@ _ ..... ..... ..... ..... ..... ..... #####
 ▶ .#... .##.. .###. .####. .###. .##.. .#...
 ◀ ...#. ..##. .###. ####. .###. ..##. ...#.
 © .###. #...# #.#.# ##..# #.#.# #...# .###.
+· ..... ..... ..... ..#.. ..... ..... .....
+— ..... ..... ..... ##### ..... ..... .....
+– ..... ..... ..... .###. ..... ..... .....
+⇄ ...#. ##### ...#. ..... .#... ##### .#...
+… ..... ..... ..... ..... ..... ..... #.#.#
+’ ..#.. ..#.. .#... ..... ..... ..... .....
 `;
 
 const MAP = new Map();
@@ -136,7 +142,7 @@ export function clearFontCache() {
   atlasCache.clear();
 }
 
-const isAscii = (s) => /^[\x20-\x7e→←↑↓×★♪■▶◀©]*$/.test(s);
+const isAscii = (s) => /^[\x20-\x7e→←↑↓×★♪■▶◀©·—–⇄…’]*$/.test(s);
 
 export function pixelWidth(str, size = 1) {
   return str.length * CELL_W * size - size;
@@ -167,7 +173,7 @@ export function measure(r, str, opt = {}) {
 
 /**
  * Draw text.
- * opt: { font:'pixel'|'ui'|'jp', size, color, align:'left'|'center'|'right', alpha, glow, shadow, weight, spacing, baseline }
+ * opt: { font:'pixel'|'ui'|'jp', size, color, align:'left'|'center'|'right', alpha, glow, shadow, weight, spacing, baseline, maxW }
  * For the pixel font size is an integer multiplier; for others it's px height.
  * y is the top of the text line.
  */
@@ -184,8 +190,16 @@ export function text(r, str, x, y, opt = {}) {
     const s = str.toUpperCase();
     const sp = opt.spacing || 0;
     const w = pixelWidth(s, k) + sp * Math.max(0, s.length - 1);
+    // squeeze horizontally if a maximum width is given and exceeded
+    const sq = opt.maxW && w > opt.maxW ? opt.maxW / w : 1;
+    if (sq < 1) {
+      ctx.save();
+      ctx.translate(x, 0);
+      ctx.scale(sq, 1);
+      ctx.translate(-x, 0);
+    }
     let x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-    if (r.arcade) x0 = Math.round(x0);
+    if (r.arcade && sq === 1) x0 = Math.round(x0);
     const yy = r.arcade ? Math.round(y) : y;
     if (opt.shadow) drawPixelRun(r, s, x0 + k, yy + k, k, sp, opt.shadow === true ? '#000000' : opt.shadow, alpha * 0.8);
     if (opt.glow && !r.arcade) {
@@ -193,7 +207,8 @@ export function text(r, str, x, y, opt = {}) {
       r.glow(cx, yy + 3.5 * k, Math.max(8, w * 0.6), opt.glow, 0.18 * alpha);
     }
     drawPixelRun(r, s, x0, yy, k, sp, color, alpha);
-    return w;
+    if (sq < 1) ctx.restore();
+    return w * sq;
   }
   const size = opt.size || 10;
   ctx.font = cssFont(r, font, size, opt.weight);
@@ -202,23 +217,24 @@ export function text(r, str, x, y, opt = {}) {
   const sp = opt.spacing || 0;
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${sp}px`;
   ctx.globalAlpha = alpha;
+  const mw = opt.maxW || undefined;
   if (opt.shadow) {
     ctx.fillStyle = opt.shadow === true ? 'rgba(0,0,0,0.85)' : opt.shadow;
-    ctx.fillText(str, x + 1, y + 1);
+    ctx.fillText(str, x + 1, y + 1, mw);
   }
   if (opt.glow && !r.arcade) {
     ctx.shadowColor = opt.glow;
     ctx.shadowBlur = 8 * r.S;
   }
   ctx.fillStyle = color;
-  ctx.fillText(str, x, y);
+  ctx.fillText(str, x, y, mw);
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
   ctx.globalAlpha = 1;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   const w = ctx.measureText(str).width;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   ctx.textAlign = 'left';
-  return w;
+  return mw ? Math.min(w, mw) : w;
 }
 
 function drawPixelRun(r, s, x, y, k, sp, color, alpha) {

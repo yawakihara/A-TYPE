@@ -12,7 +12,7 @@ import { P } from '../../gfx/particles.js';
 class Leviathan extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'LEVIATHAN CORE' });
-    this.setHp(620);
+    this.setHp(440);
     this.score = 70000;
     this.x = w.camX + W + 100;
     this.y = PH / 2;

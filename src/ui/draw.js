@@ -45,7 +45,7 @@ export function header(r, game, title, sub) {
 
 export function footer(r, game, str) {
   r.rect(0, H - 14, W, 14, '#02040a', 0.75);
-  text(r, str, W / 2, H - 11, { align: 'center', font: game.lang === 'ja' ? 'jp' : 'ui', size: 7.5, color: '#6f7d9c' });
+  text(r, str, W / 2, H - 11, { align: 'center', font: game.lang === 'ja' ? 'jp' : 'ui', size: 7.5, color: '#6f7d9c', maxW: W - 12 });
 }
 
 export function fadeIn(r, t, len = 20) {

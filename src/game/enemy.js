@@ -70,7 +70,8 @@ export class Enemy {
     const type = box ? box.type : 'body';
     if (type === 'shield') return 'armor';
     if (box && box.podOnly && src !== 'pod') return 'armor';
-    if (type === 'armor' && src !== 'pod' && src !== 'beam') return 'armor';
+    // light armour on ordinary enemies yields to the LANCE and to AEGIS; a boss's armour never does
+    if (type === 'armor' && (this.bar || (src !== 'pod' && src !== 'beam'))) return 'armor';
     if (this.inv > 0) return 'armor';
     if (box && box.part && box.part.hp !== undefined) {
       const part = box.part;

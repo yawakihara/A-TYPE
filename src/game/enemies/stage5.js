@@ -213,7 +213,7 @@ register('wyrmling', Wyrmling);
 class WyrmTail extends Enemy {
   constructor(w, x, y, opt) {
     super(w, x, y, opt);
-    this.setHp(200);
+    this.setHp(170);
     this.score = 16000;
     this.organic = true;
     this.cull = false;
@@ -259,7 +259,7 @@ class WyrmTail extends Enemy {
     const pts = this.pts.length ? this.pts : this.chain();
     const b = [];
     const tip = pts[pts.length - 1];
-    b.push({ x: tip[0], y: tip[1], hw: 10, hh: 9, type: 'weak', mul: 1 });
+    b.push({ x: tip[0], y: tip[1], hw: 12, hh: 11, type: 'weak', mul: 1 });
     for (let i = 1; i < pts.length - 1; i++) b.push({ x: pts[i][0], y: pts[i][1], hw: 12, hh: 12, type: 'armor' });
     return b;
   }

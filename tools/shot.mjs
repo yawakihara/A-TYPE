@@ -22,6 +22,8 @@ if (waitTitle) {
 } else {
   await page.waitForTimeout(Number(timeout));
 }
+// let the boot overlay finish fading when the page ran a synchronous ?frames= test
+await page.waitForTimeout(Number(process.env.POSTWAIT || 0));
 await page.screenshot({ path: out, fullPage: true });
 console.log(logs.join('\n'));
 console.log('title:', await page.title());

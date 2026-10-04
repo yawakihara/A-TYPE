@@ -108,16 +108,21 @@ export const HOWTO = [
   },
 ];
 
+/**
+ * Staff credits. [role, value, full]: a row with an empty role continues the value column;
+ * `full` rows are centred sentences spanning the panel.
+ */
 export const CREDITS = [
   ['AEGIS LANCE', ''],
-  ['GAME DESIGN · PROGRAMMING', 'Claude (Anthropic)'],
-  ['PIXEL & HD ART (PROCEDURAL)', 'Claude (Anthropic)'],
-  ['MUSIC & SOUND (SYNTHESISED)', 'Claude (Anthropic)'],
+  ['DESIGN & CODE', 'Claude (Anthropic)'],
+  ['PROCEDURAL ART', 'Claude (Anthropic)'],
+  ['MUSIC & SOUND', 'Claude (Anthropic)'],
   ['PRODUCER', 'yawakihara'],
+  ['TECHNOLOGY', 'Canvas 2D · WebGL · Web Audio'],
+  ['FONTS (SIL OFL)', 'Oxanium · DotGothic16'],
+  ['', 'Zen Kaku Gothic New'],
   ['', ''],
-  ['TECHNOLOGY', 'HTML5 Canvas · WebGL · Web Audio'],
-  ['', 'No external assets: every image and note is generated in code.'],
-  ['', ''],
-  ['INSPIRED BY', 'the arcade side-scrolling shooters of the late 1980s'],
-  ['', 'All characters, stages, names and music are original works.'],
+  ['', 'All art, music and sound are generated in code.', true],
+  ['', 'Inspired by the late-1980s arcade shooters.', true],
+  ['', 'All characters, names and music are original.', true],
 ];

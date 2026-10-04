@@ -121,7 +121,8 @@ export class Pod {
         this.x += w.dx + this.vx;
         this.spinV = 0.25;
         const sx = this.x - w.camX;
-        if ((this.side > 0 && sx > W - 34) || (this.side < 0 && sx < 30)) {
+        // a backward throw stops short of the edge so the ship can slip behind it and catch it nose-first
+        if ((this.side > 0 && sx > W - 34) || (this.side < 0 && sx < 56)) {
           this.state = 'free';
           this.vx = 0;
         }

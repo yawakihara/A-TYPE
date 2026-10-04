@@ -256,7 +256,7 @@ register('tank', Tank);
 class Assembler extends Enemy {
   constructor(w, x, y, opt) {
     super(w, x, y, opt);
-    this.setHp(190);
+    this.setHp(140);
     this.score = 14000;
     this.cull = false;
     this.bar = true;

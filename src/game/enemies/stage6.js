@@ -14,6 +14,7 @@ class Cell extends Enemy {
   constructor(w, x, y, opt) {
     super(w, x, y, opt);
     this.gen = opt.gen ?? 0;
+    this.noChain = this.gen > 0;
     this.sc = [1, 0.7, 0.45][this.gen];
     this.setHp([6, 3, 1][this.gen]);
     this.score = [300, 150, 80][this.gen];

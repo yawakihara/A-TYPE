@@ -42,5 +42,9 @@ if (!stages.length || process.env.FULL) {
   await run('full campaign 1→6 → ending (god bot)', 'stage=1&god=1&bot=1&frames=400000&until=ending', (r) => (r.scene === 'EndingScene' ? [] : [`ended in ${r.scene} stage=${r.stage} phase=${r.phase}`]), 900000);
 }
 await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`scene ${r.scene}`]), 60000);
+// every menu / UI scene renders in both graphics modes and both languages without errors
+for (const sc of ['menu', 'options', 'music', 'records', 'howto', 'credits', 'stages', 'difficulty', 'prologue', 'demo', 'ending']) {
+  for (const [mode, lang] of [['hd', 'en'], ['arcade', 'ja']]) await run(`scene ${sc} (${mode}/${lang})`, `scene=${sc}&mode=${mode}&lang=${lang}&frames=240`, null, 60000);
+}
 await browser.close();
 process.exit(failed ? 1 : 0);

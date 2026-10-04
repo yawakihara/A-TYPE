@@ -15,7 +15,7 @@ const RIBS = 6;
 class Broodmother extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'BROODMOTHER' });
-    this.setHp(760);
+    this.setHp(640);
     this.score = 60000;
     this.organic = true;
     this.x = w.camX + 272;

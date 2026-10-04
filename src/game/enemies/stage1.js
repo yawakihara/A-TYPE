@@ -5,6 +5,7 @@ import { W, PH } from '../../config.js';
 import { Enemy, register } from '../enemy.js';
 import { clamp, TAU } from '../../core/math.js';
 import { ITEM } from '../items.js';
+import { frand } from '../../core/rng.js';
 
 /** Armoured gun carrier: shield faces the player, soft vent at the back. */
 class Gunpod extends Enemy {
@@ -174,7 +175,7 @@ register('hatch', Hatch);
 class Sentinel extends Enemy {
   constructor(w, x, y, opt) {
     super(w, x, y, opt);
-    this.setHp(150);
+    this.setHp(110);
     this.score = 10000;
     this.size = 2;
     this.hw = 12;
@@ -236,7 +237,7 @@ class Sentinel extends Enemy {
       }
     } else if (this.state === 'charge') {
       if (this.st < 30) {
-        this.x += (Math.random() - 0.5) * 2;
+        this.x += frand(-1, 1);
       } else if (this.st < 80) {
         this.x += this.cvx;
         this.y += this.cvy;
@@ -261,7 +262,7 @@ class Sentinel extends Enemy {
     w.r.doFlash(0.4);
     const x0 = this.x;
     const y0 = this.y;
-    for (let i = 0; i < 6; i++) w.after(i * 6 + 1, () => w.fx.explosion(x0 + (Math.random() - 0.5) * 50, y0 + (Math.random() - 0.5) * 50, 1.2));
+    for (let i = 0; i < 6; i++) w.after(i * 6 + 1, () => w.fx.explosion(x0 + frand(-25, 25), y0 + frand(-25, 25), 1.2));
     w.sfx('bossExplode');
     w.dropItem(this.x, this.y, ITEM.CRYSTAL);
   }

@@ -127,20 +127,25 @@ export class TitleScene {
     }
     r.glow(cx, y, 150, '#1a6aff', 0.12 + this.flash * 0.4);
     r.spr('logo', cx, y);
-    // shine sweep
+    // shine sweep: a soft slanted band built from thin slices with a tent-shaped falloff
     const sw = (t * 2.2) % 700 - 160;
     if (!r.arcade && sw < 480) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(sw, y - 30);
-      ctx.lineTo(sw + 26, y - 30);
-      ctx.lineTo(sw + 6, y + 30);
-      ctx.lineTo(sw - 20, y + 30);
-      ctx.closePath();
-      ctx.clip();
-      ctx.globalCompositeOperation = 'lighter';
-      r.sprWhite('logo', cx, y, 0, 0, 1, 1, 0.45);
-      ctx.restore();
+      const SL = 7;
+      for (let i = -SL; i <= SL; i++) {
+        const a = 0.42 * (1 - Math.abs(i) / (SL + 1));
+        const x0 = sw + i * 3;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x0, y - 30);
+        ctx.lineTo(x0 + 3.2, y - 30);
+        ctx.lineTo(x0 - 16.8, y + 30);
+        ctx.lineTo(x0 - 20, y + 30);
+        ctx.closePath();
+        ctx.clip();
+        ctx.globalCompositeOperation = 'lighter';
+        r.sprWhite('logo', cx, y, 0, 0, 1, 1, a);
+        ctx.restore();
+      }
     }
     ctx.restore();
     if (this.state === 'intro' && reveal < 1) {
@@ -210,7 +215,9 @@ export class TitleScene {
       this.menu.draw(r, W / 2, 106, { lh: 13.5, size: 9.5, minW: 150 });
     }
     if (this.state === 'scores') this.drawScores(r);
-    footer(r, g, `© 2026  AEGIS LANCE  v${BUILD.version}   ·   TAB: HD ⇄ ARCADE   B: SOUND   M: MUTE   F: FULLSCREEN`);
+    footer(r, g, r.arcade
+      ? '© 2026 AEGIS LANCE   TAB:GFX  B:SOUND  M:MUTE  F:FULL'
+      : `© 2026  AEGIS LANCE  v${BUILD.version}   ·   TAB: HD ⇄ ARCADE   B: SOUND   M: MUTE   F: FULLSCREEN`);
     fadeIn(r, t, 30);
   }
 

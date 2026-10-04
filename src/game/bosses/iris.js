@@ -15,7 +15,7 @@ const NODE_ANG = [Math.PI * 0.62, Math.PI * 0.86, Math.PI * 1.14, Math.PI * 1.38
 class IrisWarden extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'IRIS WARDEN' });
-    this.setHp(700);
+    this.setHp(600);
     this.score = 50000;
     this.x = w.camX + W + 120;
     this.y = PH / 2;

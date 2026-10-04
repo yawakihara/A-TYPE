@@ -202,7 +202,9 @@ class Valve extends Enemy {
     this.touch = false;
     this.untargetable = true;
     this.revenge = false;
-    this.phase = opt.phase ?? 0;
+    // the beat is tied to the camera position, not to when the valve was spawned, so it reaches the
+    // ship in the same rhythm whether the stretch is entered by scrolling or after a checkpoint restart
+    this.phase = ((opt.phase ?? 0) + Math.round(2 * w.camX)) % 190;
     this.k = 1;
   }
 

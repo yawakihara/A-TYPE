@@ -12,6 +12,9 @@ export function makeBot(getWorld) {
   let charge = 0;
   let mode = 'rapid';
   let podT = 0;
+  let lastDeaths = 0;
+  let jx = 0;
+  let jy = 0;
   return () => {
     const w = getWorld();
     if (!w || !w.player) return null;
@@ -43,8 +46,14 @@ export function makeBot(getWorld) {
         if (lb) lodgeBox = lb;
       }
     }
-    let prefX = camX + (target && target.x - camX < 160 ? 50 : 80);
-    let prefY = lodgeBox ? lodgeBox.y : target ? target.y : PH / 2;
+    // a little per-life variety so a deterministic run doesn't replay the same fatal line forever
+    if (w.stats.deaths !== lastDeaths || w.t % 150 === 0) {
+      lastDeaths = w.stats.deaths;
+      jx = (rng.next() - 0.3) * 40 * Math.min(1, w.stats.deaths);
+      jy = (rng.next() - 0.5) * 24 * Math.min(1, w.stats.deaths);
+    }
+    let prefX = camX + (target && target.x - camX < 160 ? 50 : 80) + jx;
+    let prefY = (lodgeBox ? lodgeBox.y : target ? target.y : PH / 2) + (lodgeBox ? 0 : jy);
     // AEGIS does most good docked on the nose: catch a loose pod from the left, going around it
     const pd = w.pod;
     const loose = pd && (pd.state === 'free' || pd.state === 'enter');

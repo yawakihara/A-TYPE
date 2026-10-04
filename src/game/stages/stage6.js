@@ -26,15 +26,16 @@ export function stage6() {
   at(1250, (w) => w.spawnR('carrier', 20, 110, { fly: true, drop: ITEM.MISSILE }));
 
   // ---------------------------------------------------------------- the valves
-  valve(1460, 0);
-  valve(1660, 60);
+  // each valve beats shut as it comes on screen, then opens just as it reaches the ship's usual lane
+  valve(1460, 150);
+  valve(1660, 130);
   at(1500, leeches([112]));
   place(1760, (w) => w.spawn('eyewall', 1760, 0));
-  valve(1860, 120);
+  valve(1860, 110);
   at(1880, cells([100]));
-  valve(2060, 30);
+  valve(2060, 90);
   place(2160, (w) => w.spawn('tendril', 2160, 0, { ceil: true }));
-  valve(2260, 90);
+  valve(2260, 70);
   at(2280, leeches([90, 130]));
 
   // ---------------------------------------------------------------- mid-boss: VALVE GUARDIAN

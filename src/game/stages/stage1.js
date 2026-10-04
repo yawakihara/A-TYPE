@@ -54,7 +54,7 @@ export function stage1() {
   // ---------------------------------------------------------------- service trench
   at(2480, (w) => wave(w, 'wisp', 5, 108, { gap: 22, amp: 14 }));
   place(2700, (w) => w.spawn('turret', 2700, 0, { ceil: true }));
-  place(2760, (w) => w.spawn('hopper', 2760, 0));
+  place(2850, (w) => w.spawn('hopper', 2850, 0));
   at(2650, mites(112, 1, 'sine', 6));
   place(2900, (w) => w.spawn('turret', 2900, 0));
   place(3020, (w) => w.spawn('carrier', 3020, 0, { drop: ITEM.BIT }));
@@ -130,7 +130,7 @@ export function stage1() {
       ],
       blocks: [
         [2580, 52, 26, 40],
-        [2760, 116, 26, 44],
+        [2760, 124, 26, 36],
         [2980, 50, 24, 44, 14, 'destr'],
         [3040, 128, 24, 44, 14, 'destr'],
         [3180, 86, 22, 52, 24, 'destr'],

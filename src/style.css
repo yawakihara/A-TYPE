@@ -1,0 +1,237 @@
+/* Oxanium (SIL Open Font License 1.1, see fonts/OFL-Oxanium.txt) — embedded so the HD UI looks the same offline. */
+@font-face {
+  font-family: "Oxanium";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url(fonts/oxanium-600.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Oxanium";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url(fonts/oxanium-800.woff2) format("woff2");
+}
+
+/* Layout: one full-bleed stage, the game canvas fills it; touch controls float above. */
+:root {
+  color-scheme: dark;
+  --bg: #04050a;
+  --ink: #e8ecf6;
+  --dim: #7d869c;
+  --accent: #4ff0d8;
+  --warm: #ffb347;
+  --danger: #ff4d6d;
+  --font-ui: "Oxanium", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --font-jp: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+body {
+  font-family: var(--font-ui);
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+  background: var(--bg);
+  cursor: none;
+}
+
+.screen.show-cursor {
+  cursor: default;
+}
+
+/* ---- boot / loading overlay ---- */
+.boot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: radial-gradient(ellipse at 50% 60%, #0b1324 0%, var(--bg) 70%);
+  transition: opacity 0.6s ease;
+  z-index: 5;
+}
+
+.boot.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-mark {
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: clamp(22px, 5vw, 44px);
+  letter-spacing: 0.32em;
+  padding-left: 0.32em;
+  color: var(--ink);
+  text-shadow: 0 0 18px rgba(79, 240, 216, 0.55);
+}
+
+.boot-bar {
+  width: min(320px, 70vw);
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.boot-bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--warm));
+  transition: width 0.15s linear;
+}
+
+.boot-msg {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+}
+
+/* ---- touch controls ---- */
+.touch {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.stick {
+  position: absolute;
+  left: calc(28px + env(safe-area-inset-left, 0px));
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 236, 246, 0.18);
+  background: rgba(232, 236, 246, 0.04);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: rgba(79, 240, 216, 0.28);
+  border: 2px solid rgba(79, 240, 216, 0.6);
+}
+
+.touch-btns {
+  position: absolute;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-columns: 76px 92px;
+  grid-template-rows: 76px 92px;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.tbtn {
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 236, 246, 0.3);
+  background: rgba(232, 236, 246, 0.06);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.tbtn.on {
+  background: rgba(79, 240, 216, 0.35);
+  border-color: var(--accent);
+}
+
+.tbtn-fire {
+  grid-column: 2;
+  grid-row: 2;
+  border-color: rgba(255, 179, 71, 0.6);
+}
+
+.tbtn-rapid {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: end;
+  width: 76px;
+  height: 76px;
+}
+
+.tbtn-pod {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  align-self: end;
+  width: 76px;
+  height: 76px;
+  border-color: rgba(79, 240, 216, 0.55);
+}
+
+.tbtn-pause {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  width: 44px;
+  height: 44px;
+  font-size: 14px;
+}
+
+.err {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  max-height: 40%;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 10px;
+  font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: #ffd7de;
+  background: rgba(60, 0, 12, 0.85);
+  border: 1px solid var(--danger);
+  white-space: pre-wrap;
+  z-index: 9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot,
+  .boot-bar i {
+    transition: none;
+  }
+}

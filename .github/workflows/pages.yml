@@ -1,8 +1,9 @@
-name: Deploy to GitHub Pages
+name: Test and deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,34 +12,50 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
+          cache: npm
+      - run: npm ci
+      - name: 単体テスト
+        run: npm test
+      - name: 単一HTMLにビルド
+        run: npm run build
+      - name: E2E用のChromiumを準備
+        run: npx playwright install --with-deps chromium
+      - name: E2E(ボットが全ステージと通しプレイを完走)
+        run: |
+          node tools/serve.mjs 8123 &
+          sleep 1
+          npm run e2e
+      - name: 公開ファイルをまとめる
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p _site
+          cp dist/index.html _site/index.html
+          cp -r docs/screenshots _site/screenshots
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
 
   deploy:
-    needs: test
+    if: github.event_name != 'pull_request'
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - name: 公開対象のみをまとめる
-        run: |
-          mkdir -p _site
-          cp -r index.html css js _site/
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

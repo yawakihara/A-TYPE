@@ -176,7 +176,12 @@ export class Input {
   }
 
   pollPads() {
-    const list = navigator.getGamepads ? navigator.getGamepads() : [];
+    let list = [];
+    try {
+      list = navigator.getGamepads ? navigator.getGamepads() || [] : [];
+    } catch (e) {
+      list = []; // blocked by a permissions policy (e.g. inside a sandboxed frame)
+    }
     this.pads.length = 0;
     for (const p of list) if (p && p.connected) this.pads.push(p);
   }
@@ -301,7 +306,8 @@ export class Input {
       const act = p.vibrationActuator;
       if (act && act.playEffect) {
         try {
-          act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak });
+          const pr = act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak });
+          if (pr && pr.catch) pr.catch(() => {});
         } catch (e) {
           /* rumble unsupported */
         }

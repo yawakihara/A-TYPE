@@ -81,8 +81,8 @@ export const HOWTO = [
   {
     title: { en: 'THE LANCE', ja: '溜め撃ち〈ランス〉' },
     lines: {
-      en: ['Tap to fire. Hold to fill the BEAM meter at the bottom of the screen.', 'Release to loose the LANCE — a piercing beam that grows with the charge.', 'A full meter (5th level) flashes white: it cuts through whole formations.', 'Killing several enemies with one LANCE scores a CHAIN bonus.'],
-      ja: ['短く押すと通常弾。押し続けると画面下のBEAMメーターが溜まる。', '離すと〈ランス〉発射。溜めるほど太く長く、敵を貫通する。', 'メーター満タン(白く点滅)で最大威力。編隊ごと貫ける。', '1発のランスで複数撃破するとCHAINボーナス。'],
+      en: ['Tap to fire. Hold to fill the BEAM meter at the bottom of the screen.', 'Release to loose the LANCE — a piercing beam that grows with the charge.', 'A full meter (5th level) flashes white: it cuts through whole formations.', 'Killing several enemies with one LANCE scores a CHAIN bonus.', 'It pierces light armour, but nothing gets through a boss’s armour: hit the weak point.'],
+      ja: ['短く押すと通常弾。押し続けると画面下のBEAMメーターが溜まる。', '離すと〈ランス〉発射。溜めるほど太く長く、敵を貫通する。', 'メーター満タン(白く点滅)で最大威力。編隊ごと貫ける。', '1発のランスで複数撃破するとCHAINボーナス。', '軽い装甲は貫くが、ボスの装甲は何も通さない。弱点を狙え。'],
     },
   },
   {

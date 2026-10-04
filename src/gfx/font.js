@@ -144,6 +144,12 @@ export function clearFontCache() {
 
 const isAscii = (s) => /^[\x20-\x7e→←↑↓×★♪■▶◀©·—–⇄…’]*$/.test(s);
 
+/** Characters of `str` the bitmap font cannot draw, when `str` would be rendered with it. */
+export function missingPixelGlyphs(str) {
+  if (!isAscii(str)) return [];
+  return [...new Set([...str.toUpperCase()].filter((ch) => !MAP.has(ch)))];
+}
+
 export function pixelWidth(str, size = 1) {
   return str.length * CELL_W * size - size;
 }

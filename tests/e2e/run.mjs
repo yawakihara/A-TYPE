@@ -89,6 +89,53 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }
+// title → menu → difficulty → prologue → play, pause menu toggles, quit; idle attract demo and back
+{
+  const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${base}/index.html?frames=1`);
+  await page.waitForFunction(() => document.title === 'done', null, { timeout: 60000 });
+  const r = await page.evaluate(() => {
+    const g = window.__AL;
+    const out = [];
+    const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(); };
+    const tap = (code, wait = 4) => { g.input.keys.add(code); step(1); g.input.keys.delete(code); step(wait); };
+    const name = () => g.scene.constructor.name;
+    step(400); // logo intro
+    tap('Enter', 30); // press start
+    out.push(`menu:${g.scene.state}`);
+    tap('Enter', 30); // START GAME
+    out.push(`after-start:${name()}`);
+    tap('Enter', 30); // difficulty (ARCADE)
+    out.push(`after-difficulty:${name()}`);
+    tap('Enter', 40); // skip prologue
+    out.push(`after-prologue:${name()} stage:${g.scene.world && g.scene.world.stage.index + 1}`);
+    step(200);
+    tap('Escape', 10);
+    out.push(`pause:${g.scene.mode}`);
+    const before = g.cfg.mode;
+    tap('ArrowDown'); tap('ArrowRight', 10); // GRAPHICS (RESTART STAGE is skipped outside practice)
+    out.push(`gfx-toggled:${g.cfg.mode !== before}`);
+    tap('ArrowDown'); tap('ArrowRight', 10); // SOUND
+    out.push(`kit:${g.cfg.kit}`);
+    tap('ArrowDown'); tap('Enter', 40); // QUIT TO TITLE
+    out.push(`after-quit:${name()}`);
+    for (let i = 0; i < 3000 && name() === 'TitleScene'; i++) step(1); // idle → attract demo
+    out.push(`idle:${name()}`);
+    step(120);
+    tap('KeyZ', 40);
+    out.push(`after-demo:${name()}`);
+    return out;
+  });
+  const expect = ['menu:menu', 'after-start:DifficultyScene', 'after-difficulty:PrologueScene', 'after-prologue:PlayScene stage:1', 'pause:pause', 'gfx-toggled:true', 'kit:arcade', 'after-quit:TitleScene', 'idle:DemoScene', 'after-demo:TitleScene'];
+  const problems = [...errors];
+  for (const e of expect) if (!r.some((x) => x.startsWith(e))) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
+  if (problems.length) failed++;
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  flow: title, menus, prologue, pause menu, attract demo  ${JSON.stringify(r)}`);
+  for (const p of problems) console.log(`      ${p}`);
+  await page.close();
+}
 // every menu / UI scene renders in both graphics modes and both languages without errors
 for (const sc of ['menu', 'options', 'music', 'records', 'howto', 'credits', 'stages', 'difficulty', 'prologue', 'demo', 'ending']) {
   for (const [mode, lang] of [['hd', 'en'], ['arcade', 'ja']]) await run(`scene ${sc} (${mode}/${lang})`, `scene=${sc}&mode=${mode}&lang=${lang}&frames=240`, null, 60000);

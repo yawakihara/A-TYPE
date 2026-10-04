@@ -36,6 +36,7 @@ const PAD = {
 };
 
 export const ACTIONS = Object.keys(KEYMAP);
+const TEXT_KEY = /^(Key[A-Z]|Digit[0-9]|Space)$/;
 
 export class Input {
   constructor() {
@@ -57,6 +58,7 @@ export class Input {
     this.locked = false;
     this.anyPressed = false;
     this.typed = [];
+    this.textMode = false;
     this.onUnlock = null;
     this.clicked = false;
   }
@@ -171,7 +173,11 @@ export class Input {
 
   keyHeld(action) {
     const codes = KEYMAP[action];
-    for (let i = 0; i < codes.length; i++) if (this.keys.has(codes[i])) return true;
+    for (let i = 0; i < codes.length; i++) {
+      // in text mode (name entry) letters, digits and space type instead of acting as controls
+      if (this.textMode && TEXT_KEY.test(codes[i])) continue;
+      if (this.keys.has(codes[i])) return true;
+    }
     return false;
   }
 

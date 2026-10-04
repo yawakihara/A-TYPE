@@ -42,6 +42,53 @@ if (!stages.length || process.env.FULL) {
   await run('full campaign 1→6 → ending (god bot)', 'stage=1&god=1&bot=1&frames=400000&until=ending', (r) => (r.scene === 'EndingScene' ? [] : [`ended in ${r.scene} stage=${r.stage} phase=${r.phase}`]), 900000);
 }
 await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`scene ${r.scene}`]), 60000);
+// the miss → continue → game over → name entry → records flow, driven frame by frame
+{
+  const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${base}/index.html?stage=1&frames=1`);
+  await page.waitForFunction(() => document.title === 'done', null, { timeout: 60000 });
+  const r = await page.evaluate(() => {
+    const g = window.__AL;
+    const out = [];
+    const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(); };
+    const tap = (code) => { g.input.keys.add(code); step(1); g.input.keys.delete(code); step(2); };
+    const type = (str) => { for (const ch of str) { g.input.keys.add(`Key${ch}`); g.input.typed.push(ch.toLowerCase()); step(1); g.input.keys.delete(`Key${ch}`); step(2); } };
+    const missUntilContinue = () => {
+      for (let i = 0; i < 20000 && g.scene.mode !== 'continue'; i++) {
+        const w = g.scene.world;
+        if (w && w.phase === 'play' && w.player.alive && w.player.invuln <= 0 && w.entryT <= 0) w.killPlayer('test');
+        step(1);
+      }
+    };
+    missUntilContinue();
+    out.push(`continue1:${g.scene.mode}`);
+    g.scene.session.score = 123450;
+    step(40);
+    tap('Enter');
+    out.push(`after-continue:${g.scene.mode} score-last-digit:${g.scene.session.score % 10} lives:${g.scene.session.lives}`);
+    g.scene.session.score = 987650;
+    missUntilContinue();
+    out.push(`continue2:${g.scene.mode}`);
+    for (let i = 0; i < 1500 && g.scene.constructor.name === 'PlayScene'; i++) step(1);
+    out.push(`after-gameover:${g.scene.constructor.name}`);
+    type('ZXA');
+    out.push(`name:${g.scene.name && g.scene.name.join('')}`);
+    tap('Enter');
+    out.push(`after-name:${g.scene.constructor.name}`);
+    const top = g.scores[g.cfg.diff][0];
+    out.push(`top:${top.name}/${top.score}`);
+    return out;
+  });
+  const expect = ['continue1:continue', 'after-continue:play score-last-digit:1', 'continue2:continue', 'after-gameover:NameEntryScene', 'name:ZXA', 'after-name:RecordsScene', 'top:ZXA/987650'];
+  const problems = [...errors];
+  for (const e of expect) if (!r.some((x) => x.startsWith(e))) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
+  if (problems.length) failed++;
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  flow: miss, continue, game over, name entry  ${JSON.stringify(r)}`);
+  for (const p of problems) console.log(`      ${p}`);
+  await page.close();
+}
 // every menu / UI scene renders in both graphics modes and both languages without errors
 for (const sc of ['menu', 'options', 'music', 'records', 'howto', 'credits', 'stages', 'difficulty', 'prologue', 'demo', 'ending']) {
   for (const [mode, lang] of [['hd', 'en'], ['arcade', 'ja']]) await run(`scene ${sc} (${mode}/${lang})`, `scene=${sc}&mode=${mode}&lang=${lang}&frames=240`, null, 60000);

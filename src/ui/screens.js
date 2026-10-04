@@ -573,6 +573,11 @@ export class NameEntryScene extends Screen {
 
   enter() {
     this.game.music('records', 0.5);
+    this.game.input.textMode = true;
+  }
+
+  exit() {
+    this.game.input.textMode = false;
   }
 
   commit() {
@@ -635,7 +640,14 @@ export class NameEntryScene extends Screen {
       text(r, this.name[i], x, 103, { align: 'center', font: 'ui', size: 18, weight: 800, color: sel && this.t % 20 < 12 ? '#3ff0ff' : '#ffffff' });
     }
     const okSel = this.pos >= 3;
-    text(r, okSel ? g.L('PRESS ENTER TO REGISTER', 'ENTERで登録') : g.L('↑↓ LETTER   Z NEXT   X BACK   (OR TYPE)', '↑↓ 文字   Z 次へ   X 戻る   (キー入力も可)'), W / 2, 146, { align: 'center', font: jp(g), size: 8.5, color: okSel ? '#7cffb0' : '#a8b8d8' });
+    const kb = g.input.lastDevice === 'keyboard';
+    const ok = kb ? 'ENTER' : g.input.glyph('confirm');
+    const hint = okSel
+      ? g.L(`PRESS ${ok} TO REGISTER`, `${ok}で登録`)
+      : kb
+        ? g.L('TYPE YOUR NAME   ←→ MOVE   ↑↓ LETTER   ENTER DONE', 'キーで名前を入力   ←→ 移動   ↑↓ 文字   ENTER 決定')
+        : g.L(`↑↓ LETTER   ${g.input.glyph('fire')} NEXT   ${g.input.glyph('pod')} BACK`, `↑↓ 文字   ${g.input.glyph('fire')} 次へ   ${g.input.glyph('pod')} 戻る`);
+    text(r, hint, W / 2, 146, { align: 'center', font: jp(g), size: 8.5, color: okSel ? '#7cffb0' : '#a8b8d8', maxW: W - 24 });
     text(r, `${Math.ceil(this.timer / 60)}`, W / 2, 166, { align: 'center', font: 'ui', size: 10, color: '#7f8ca8' });
     fadeIn(r, this.t, 12);
   }

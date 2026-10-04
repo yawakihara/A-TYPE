@@ -38,6 +38,9 @@ for (const st of list) {
     return p;
   });
 }
+if (!stages.length || process.env.FULL) {
+  await run('full campaign 1→6 → ending (god bot)', 'stage=1&god=1&bot=1&frames=400000&until=ending', (r) => (r.scene === 'EndingScene' ? [] : [`ended in ${r.scene} stage=${r.stage} phase=${r.phase}`]), 900000);
+}
 await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`scene ${r.scene}`]), 60000);
 await browser.close();
 process.exit(failed ? 1 : 0);

@@ -70,6 +70,7 @@ export function bootScenes(game, params) {
   game.testStop = () => {
     const until = params.get('until');
     const sc = game.scene;
+    if (until === 'ending') return !!sc && sc.constructor.name === 'EndingScene';
     if (!until || !sc || !sc.world) return false;
     if (until === 'clear') return sc.mode === 'tally' || sc.world.phase === 'tally';
     if (until === 'boss') return sc.world.bossState === 'fight';

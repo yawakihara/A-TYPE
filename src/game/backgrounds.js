@@ -147,44 +147,142 @@ function planet(r, x, y, R, base, atmo, t) {
   ctx.stroke();
 }
 
-// ------------------------------------------------------------------ station silhouettes
+// ------------------------------------------------------------------ orbital station structures
 
-function stationLayer(r, camX, par, color, seed, baseY, scale, lights, t) {
+/** Far ring-station arc with running lights. */
+function ringStation(r, camX, t) {
   const ctx = r.ctx;
-  const span = 520 * scale;
+  const cx = 520 - camX * 0.02;
+  const cy = 420;
+  const R = 380;
+  ctx.strokeStyle = '#0d1424';
+  ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, Math.PI * 1.1, Math.PI * 1.75);
+  ctx.stroke();
+  ctx.strokeStyle = '#18233a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 8, Math.PI * 1.1, Math.PI * 1.75);
+  ctx.stroke();
+  for (let i = 0; i < 22; i++) {
+    const a = Math.PI * 1.12 + i * 0.03;
+    const x = cx + Math.cos(a) * R;
+    const y = cy + Math.sin(a) * R;
+    if (x < -10 || x > W + 10) continue;
+    // spokes toward the hub
+    if (i % 5 === 0) {
+      ctx.strokeStyle = '#0b1120';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(cx + Math.cos(a) * (R - 90), cy + Math.sin(a) * (R - 90));
+      ctx.stroke();
+    }
+    if ((i + Math.floor(t / 30)) % 4 === 0) r.glow(x, y, 2.5, '#ffb347', 0.7);
+  }
+}
+
+/** Truss girders with blinking beacons. */
+function trussLayer(r, camX, par, y0, color, t) {
+  const ctx = r.ctx;
+  const off = camX * par;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.4;
+  const cell = 16;
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(W, y0);
+  ctx.moveTo(0, y0 + cell);
+  ctx.lineTo(W, y0 + cell);
+  for (let x = -((off % cell) + cell); x < W + cell; x += cell) {
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x + cell, y0 + cell);
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x, y0 + cell);
+  }
+  ctx.stroke();
+  const k0 = Math.floor(off / 96);
+  for (let k = k0 - 1; k < k0 + 6; k++) {
+    const x = k * 96 - off + 20;
+    if (Math.sin(t * 0.06 + k * 1.7) > 0.7) r.glow(x, y0, 3, '#ff4a40', 0.9);
+  }
+}
+
+/** Station modules: cylinders, solar arrays and antenna masts with lit windows. */
+function moduleLayer(r, camX, par, baseY, sc, seed, t) {
+  const ctx = r.ctx;
+  const span = 230 * sc;
   const off = camX * par;
   const first = Math.floor(off / span) - 1;
-  for (let k = first; k < first + 4; k++) {
+  for (let k = first; k < first + Math.ceil(W / span) + 2; k++) {
     const x0 = k * span - off;
     const h = hash1(k * 13 + seed);
-    ctx.fillStyle = color;
-    // long truss with towers and dishes
-    const ty = baseY;
-    ctx.fillRect(x0, ty, span, 6 * scale);
-    for (let i = 0; i < 6; i++) {
-      const hx = x0 + i * (span / 6) + hash1(k * 7 + i) * 20;
-      const hh = (20 + hash1(k * 31 + i + seed) * 60) * scale;
-      const ww = (10 + hash1(k * 17 + i) * 26) * scale;
-      ctx.fillRect(hx, ty - hh, ww, hh + 6 * scale);
-      if (hash1(i + k * 3) < 0.5) {
-        ctx.beginPath();
-        ctx.arc(hx + ww / 2, ty - hh - 6 * scale, 8 * scale, Math.PI, 0);
-        ctx.fill();
-      }
-      // girders
-      ctx.fillRect(hx + ww, ty - hh * 0.6, 18 * scale, 2 * scale);
-      if (lights) {
-        const blink = Math.sin(t * 0.05 + i * 2 + k) > 0.6;
-        if (blink) r.glow(hx + ww / 2, ty - hh, 3, lights, 0.8);
-      }
-    }
-    if (h < 0.5) {
-      // ring module
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3 * scale;
+    const kind = Math.floor(hash1(k * 7 + seed) * 3);
+    if (kind === 0) {
+      // pressurised cylinder module on struts
+      const w = (90 + h * 50) * sc;
+      const hh = (22 + h * 10) * sc;
+      const y = baseY - hh - 18 * sc;
+      const g = ctx.createLinearGradient(0, y, 0, y + hh);
+      g.addColorStop(0, '#2c3a56');
+      g.addColorStop(0.4, '#1a2438');
+      g.addColorStop(1, '#0a0f1a');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.ellipse(x0 + span * 0.6, ty - 40 * scale, 30 * scale, 50 * scale, 0, 0, Math.PI * 2);
+      ctx.moveTo(x0 + hh / 2, y);
+      ctx.lineTo(x0 + w - hh / 2, y);
+      ctx.arc(x0 + w - hh / 2, y + hh / 2, hh / 2, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(x0 + hh / 2, y + hh);
+      ctx.arc(x0 + hh / 2, y + hh / 2, hh / 2, Math.PI / 2, Math.PI * 1.5);
+      ctx.fill();
+      ctx.fillStyle = '#0a0f1a';
+      ctx.fillRect(x0 + w * 0.3, y + hh, 3 * sc, 18 * sc);
+      ctx.fillRect(x0 + w * 0.7, y + hh, 3 * sc, 18 * sc);
+      for (let i = 0; i < 7; i++) {
+        const lit = hash1(k * 31 + i) < 0.55;
+        ctx.fillStyle = lit ? '#ffd38a' : '#1e2a40';
+        ctx.fillRect(x0 + hh * 0.7 + i * ((w - hh * 1.4) / 7), y + hh * 0.42, 3 * sc, 2 * sc);
+      }
+    } else if (kind === 1) {
+      // solar array wing: blue cells catching the starlight
+      const w = (110 + h * 40) * sc;
+      const hh = 26 * sc;
+      const y = baseY - hh - 30 * sc;
+      ctx.fillStyle = '#0a0f1a';
+      ctx.fillRect(x0 + w / 2 - 2 * sc, y + hh, 4 * sc, 30 * sc);
+      const g = ctx.createLinearGradient(x0, y, x0 + w, y + hh);
+      g.addColorStop(0, '#1a3a7a');
+      g.addColorStop(0.5, '#2a5aa8');
+      g.addColorStop(1, '#10224a');
+      ctx.fillStyle = g;
+      ctx.fillRect(x0, y, w, hh);
+      ctx.strokeStyle = '#0a1428';
+      ctx.lineWidth = 0.8;
+      for (let i = 1; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x0 + (w * i) / 8, y);
+        ctx.lineTo(x0 + (w * i) / 8, y + hh);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(x0, y + hh / 2);
+      ctx.lineTo(x0 + w, y + hh / 2);
       ctx.stroke();
+      // specular glint sliding across the panel
+      const gx = x0 + ((t * 0.4 + k * 50) % (w + 40)) - 20;
+      if (!r.arcade && gx > x0 && gx < x0 + w) r.glow(gx, y + hh / 2, 10 * sc, '#9fd0ff', 0.25);
+    } else {
+      // antenna mast with dish and beacon
+      const hh = (60 + h * 40) * sc;
+      ctx.fillStyle = '#0c1220';
+      ctx.fillRect(x0 + 40 * sc, baseY - hh, 5 * sc, hh);
+      for (let i = 0; i < 4; i++) ctx.fillRect(x0 + 34 * sc, baseY - hh + i * hh * 0.22, 17 * sc, 2 * sc);
+      ctx.beginPath();
+      ctx.ellipse(x0 + 50 * sc, baseY - hh + 6 * sc, 14 * sc, 6 * sc, -0.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a2438';
+      ctx.fill();
+      if (Math.sin(t * 0.05 + k) > 0.2) r.glow(x0 + 42 * sc, baseY - hh - 2, 3, '#ff4a40', 0.9);
     }
   }
 }
@@ -214,8 +312,10 @@ class SpaceBG {
     }
     this.stars[1].draw(r, w.camX, t, this.streak);
     if (o.station) {
-      stationLayer(r, w.camX, 0.18, o.station[0], 3, PH - 40, 0.6, null, t);
-      stationLayer(r, w.camX, 0.34, o.station[1], 9, PH - 10, 0.9, '#ffb347', t);
+      ringStation(r, w.camX, t);
+      trussLayer(r, w.camX, 0.12, 40, '#0f1726', t);
+      moduleLayer(r, w.camX, 0.2, PH - 30, 0.7, 3, t);
+      moduleLayer(r, w.camX, 0.34, PH + 6, 1, 11, t);
     }
     this.stars[2].draw(r, w.camX, t, this.streak);
     if (o.extra) o.extra(r, w);
@@ -530,7 +630,7 @@ export const BACKGROUNDS = {
       neb: ['#1a4a8a', '#8a4a3a', '#ffd0a0'],
       seed: 21,
       density: 0.5,
-      planet: { x: 300, y: 200, r: 90, base: ['#6ab0ff', '#1a4a9a', '#030a20'], atmo: '#9fd8ff' },
+      planet: { x: 318, y: 214, r: 84, base: ['#3a6aa8', '#122a5a', '#020818'], atmo: '#7ab8ff' },
     }),
   station: () =>
     new SpaceBG({

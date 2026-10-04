@@ -529,6 +529,8 @@ export class World {
         if (s.pierce && !s.canHit(e, this)) continue;
         const res = e.damage(s.dmg, s.kind, hit);
         if (res !== 'none') s.onHit(this, res, e, hit);
+        if (res === 'armor') this.sfx('clink');
+        else if (res === 'hit') this.sfx('hit');
         if (s.dead) break;
       }
     }

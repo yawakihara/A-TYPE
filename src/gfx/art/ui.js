@@ -11,14 +11,14 @@ defineSprite('logo', {
   draw(ctx, f, info) {
     if (info.arcade) {
       // banded period logo from the bitmap font
-      const bands = [['#ffffff', -14], ['#bfe8ff', -7], ['#5aa8e0', 0], ['#2a5a9a', 7], ['#9fd8ff', 14]];
+      const bands = ['#ffffff', '#bfe8ff', '#4a90d0', '#9fd8ff'];
       for (let i = 0; i < bands.length; i++) {
         ctx.save();
         ctx.beginPath();
-        ctx.rect(-170, bands[i][1] - 14 + 2, 340, 7);
+        ctx.rect(-170, -16 + i * 8, 340, i === bands.length - 1 ? 12 : 8);
         ctx.clip();
         bakePixelText(ctx, 'AEGIS LANCE', 2, -12, 4, '#06101e', 'center');
-        bakePixelText(ctx, 'AEGIS LANCE', 0, -14, 4, bands[i][0], 'center');
+        bakePixelText(ctx, 'AEGIS LANCE', 0, -14, 4, bands[i], 'center');
         ctx.restore();
       }
       return;

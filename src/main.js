@@ -43,6 +43,10 @@ async function boot() {
   const input = new Input();
   const audio = new AudioEngine();
   const game = new Game(r, input, audio, { params });
+  // test / share overrides: ?mode=arcade|hd &lang=ja|en &kit=arcade|remastered &crt=0
+  for (const k of ['mode', 'lang', 'kit']) if (params.has(k)) game.cfg[k] = params.get(k);
+  if (params.has('crt')) game.cfg.crt = params.get('crt') !== '0';
+  game.applyCfg();
   window.__AL = game;
   input.attach(canvas, () => audio.unlock());
   window.addEventListener('resize', () => r.resize());

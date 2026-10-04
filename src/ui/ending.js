@@ -6,7 +6,7 @@ import { W, H, PH } from '../config.js';
 import { text, wrap } from '../gfx/font.js';
 import { Backdrop, footer, fadeIn } from './draw.js';
 import { CREDITS } from './i18n.js';
-import { formatScore, clamp, easeOutCubic } from '../core/math.js';
+import { formatScore, clamp, easeOutCubic, lerp } from '../core/math.js';
 import { frand } from '../core/rng.js';
 import { hasSprite } from '../gfx/sprites.js';
 
@@ -120,9 +120,10 @@ export class EndingScene {
     r.screen();
     const lt = t - 360;
     const sunK = clamp(lt / 600, 0, 1);
-    r.glow(W * 0.8, PH * 0.75, 120 + sunK * 80, '#ffb070', 0.25 + sunK * 0.35);
-    const sx = 120 + lt * 0.04;
-    const sy = 140 + Math.sin(t * 0.02) * 4;
+    r.glow(W * 0.86, PH * 0.82, 50 + sunK * 40, '#ffb070', 0.12 + sunK * 0.18);
+    const rollK = clamp((t - this.rollStart() + 120) / 240, 0, 1);
+    const sx = lerp(120 + Math.min(lt, 2400) * 0.04, 58, easeOutCubic(rollK));
+    const sy = lerp(140, 190, easeOutCubic(rollK)) + Math.sin(t * 0.02) * 4;
     if (sx < W + 40) {
       r.spr('flame', sx - 21, sy, (t >> 2) % 4, 0, 0.8, 1, 1, true);
       r.spr('ship', sx, sy, 0);

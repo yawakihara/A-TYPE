@@ -243,7 +243,7 @@ export class RecordsScene extends Screen {
       this.diff = (this.diff + 2) % 3;
       g.audio.sfx('menuMove');
     }
-    if (inp.pressed('cancel') || inp.pressed('confirm')) {
+    if (inp.pressed('cancel') || inp.pressed('confirm') || inp.clicked) {
       g.audio.sfx('menuBack');
       g.music('title', 0.5);
       this.back(3);
@@ -378,12 +378,12 @@ export class HowtoScene extends Screen {
     super.update();
     const g = this.game;
     const inp = g.input;
-    if (inp.repeat('right') || inp.pressed('confirm')) {
+    if (inp.repeat('right') || inp.pressed('confirm') || inp.clicked) {
       if (this.page < HOWTO.length - 1) {
         this.page++;
         this.pt = 0;
         g.audio.sfx('menuMove');
-      } else if (inp.pressed('confirm')) this.back(5);
+      } else if (inp.pressed('confirm') || inp.clicked) this.back(5);
     }
     if (inp.repeat('left') && this.page > 0) {
       this.page--;
@@ -446,7 +446,7 @@ export class CreditsScene extends Screen {
   update() {
     super.update();
     const inp = this.game.input;
-    if (inp.pressed('cancel') || inp.pressed('confirm')) {
+    if (inp.pressed('cancel') || inp.pressed('confirm') || inp.clicked) {
       this.game.audio.sfx('menuBack');
       this.back(6);
     }
@@ -528,7 +528,7 @@ export class PrologueScene extends Screen {
     super.update();
     const inp = this.game.input;
     const lines = PROLOGUE[this.game.lang] || PROLOGUE.en;
-    if ((this.t > 20 && (inp.pressed('confirm') || inp.pressed('pause'))) || this.t > 60 + lines.length * 200) this.onDone();
+    if ((this.t > 20 && (inp.pressed('confirm') || inp.pressed('pause') || inp.clicked)) || this.t > 60 + lines.length * 200) this.onDone();
   }
 
   draw(r) {

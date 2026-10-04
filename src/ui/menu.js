@@ -26,6 +26,27 @@ export class Menu {
     if (this.flash > 0) this.flash--;
     const n = this.items.length;
     const enabled = (k) => !(this.items[k].disabled && this.items[k].disabled());
+    // mouse: hovering a row selects it, clicking activates it
+    const rowAt = (x, y) => {
+      if (!this.rows) return -1;
+      const p = this.game.r.clientToLogical(x, y);
+      return this.rows.findIndex((b) => p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1);
+    };
+    if (inp.pointerMoved) {
+      const k = rowAt(inp.px, inp.py);
+      if (k >= 0 && k !== this.i && enabled(k)) {
+        this.i = k;
+        audio.sfx('menuMove');
+      }
+    }
+    let click = false;
+    if (inp.clicked) {
+      const k = rowAt(inp.clickX, inp.clickY);
+      if (k >= 0 && enabled(k)) {
+        this.i = k;
+        click = true;
+      }
+    }
     if (inp.repeat('down')) {
       let k = this.i;
       do k = (k + 1) % n;
@@ -49,13 +70,13 @@ export class Menu {
       it.right();
       audio.sfx('menuMove');
     }
-    if (inp.pressed('confirm') && it.select && enabled(this.i)) {
+    if ((inp.pressed('confirm') || click) && it.select && enabled(this.i)) {
       this.flash = 10;
       audio.sfx('menuSelect');
       it.select();
       return 'select';
     }
-    if (inp.pressed('confirm') && !it.select && it.right) {
+    if ((inp.pressed('confirm') || click) && !it.select && it.right) {
       it.right();
       audio.sfx('menuMove');
     }
@@ -79,6 +100,7 @@ export class Menu {
       maxW = Math.max(maxW, measure(r, s, { font: 'ui', size }));
     }
     const wBox = Math.min(W - 24, Math.max(opt.minW || 0, maxW + 40));
+    this.rows = this.items.map((it, k) => ({ x0: cx - wBox / 2, x1: cx + wBox / 2, y0: y + k * lh - 2, y1: y + k * lh - 3 + lh }));
     this.items.forEach((it, k) => {
       const yy = y + k * lh;
       const sel = k === this.i;

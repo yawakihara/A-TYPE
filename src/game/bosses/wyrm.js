@@ -117,7 +117,7 @@ class CoilWyrm extends Boss {
     this.y += Math.sin(this.a) * speed;
     this.trail.unshift([this.x, this.y]);
     this.trail.length = Math.min(this.trail.length, SEGS * GAP + 10);
-    for (const s of this.trail) s[0] += 0; // trail lives in world space; the camera is stopped
+    // the trail lives in world space; the camera is stopped during the fight, so it needs no shifting
     for (const n of this.nodes) if (n.flash > 0) n.flash--;
     if (this.state === 'enter') {
       if (this.st === 2) w.sfx('bossRoar');

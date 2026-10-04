@@ -9,6 +9,8 @@ import { SFX, minGap } from './sfx.js';
 import { SONGS } from './songs/index.js';
 
 const LOOKAHEAD = 0.18;
+/** The FM kit is mixed drier and leaner; this makeup gain keeps both kits at the same loudness. */
+const KIT_LEVEL = { remastered: 1, arcade: 1.45 };
 
 export class AudioEngine {
   constructor() {
@@ -102,7 +104,7 @@ export class AudioEngine {
       this.freq = new Uint8Array(this.analyser.frequencyBinCount);
     }
     this.musicBus = ctx.createGain();
-    this.musicBus.gain.value = this.musicVol;
+    this.musicBus.gain.value = this.musicLevel();
     this.musicFilter = ctx.createBiquadFilter();
     this.musicFilter.type = 'lowpass';
     this.musicFilter.frequency.value = 20000;
@@ -182,10 +184,16 @@ export class AudioEngine {
     return this.ctx ? this.ctx.currentTime : 0;
   }
 
+  /** Music bus gain: the volume setting times the kit's loudness makeup (ducked while paused). */
+  musicLevel() {
+    return this.musicVol * (KIT_LEVEL[this.kit] ?? 1) * (this.paused ? 0.55 : 1);
+  }
+
   setKit(k) {
     this.kit = k;
     if (this.ctx) {
       const t = this.ctx.currentTime;
+      this.musicBus.gain.setTargetAtTime(this.musicLevel(), t, 0.1);
       this.revOut.gain.setTargetAtTime(k === 'remastered' ? 0.55 : 0.12, t, 0.1);
       this.delOut.gain.setTargetAtTime(k === 'remastered' ? 0.35 : 0.08, t, 0.1);
     }
@@ -195,7 +203,7 @@ export class AudioEngine {
     this.musicVol = m;
     this.sfxVol = s;
     if (this.ctx) {
-      this.musicBus.gain.setTargetAtTime(m, this.ctx.currentTime, 0.05);
+      this.musicBus.gain.setTargetAtTime(this.musicLevel(), this.ctx.currentTime, 0.05);
       this.sfxIn.gain.setTargetAtTime(s, this.ctx.currentTime, 0.05);
     }
   }
@@ -211,7 +219,7 @@ export class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.musicFilter.frequency.setTargetAtTime(on ? 700 : 20000, t, 0.12);
-    this.musicBus.gain.setTargetAtTime(on ? this.musicVol * 0.55 : this.musicVol, t, 0.12);
+    this.musicBus.gain.setTargetAtTime(this.musicLevel(), t, 0.12);
   }
 
   // ------------------------------------------------------------------ SFX

@@ -59,6 +59,12 @@ export class Input {
     this.anyPressed = false;
     this.typed = [];
     this.textMode = false;
+    // mouse pointer (client px) for menus
+    this.px = -1;
+    this.py = -1;
+    this.pointerMoved = false;
+    this.clickX = -1;
+    this.clickY = -1;
     this.onUnlock = null;
     this.clicked = false;
   }
@@ -84,8 +90,18 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
     canvas.addEventListener('pointerdown', (e) => {
       gesture();
-      if (e.pointerType === 'mouse') this.clicked = true;
+      if (e.pointerType === 'mouse') {
+        this.clicked = true;
+        this.clickX = e.clientX;
+        this.clickY = e.clientY;
+      }
       canvas.focus();
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      this.px = e.clientX;
+      this.py = e.clientY;
+      this.pointerMoved = true;
     });
     window.addEventListener('touchstart', () => {
       this.showTouch();
@@ -279,6 +295,7 @@ export class Input {
   endFrame() {
     this.typed.length = 0;
     this.clicked = false;
+    this.pointerMoved = false;
   }
 
   held(a) {
@@ -305,6 +322,7 @@ export class Input {
     for (const a of ACTIONS) this.prevHeld[a] = this.down[a] = this.keyHeld(a) || this.padHeld(a);
     this.typed.length = 0;
     this.clicked = false;
+    this.pointerMoved = false;
   }
 
   rumble(strong, weak, ms) {

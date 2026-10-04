@@ -78,6 +78,29 @@ export class Game {
     this.toast = { str, color, t: 0 };
   }
 
+  /**
+   * Adaptive quality: fed the real interval between displayed frames. When the display keeps
+   * missing 60 fps for about three seconds, step the render quality down (never up) and say so.
+   */
+  perf(dt) {
+    if (document.hidden || dt > 100 || this.t < 300) return;
+    this.dtAvg = this.dtAvg ? this.dtAvg * 0.97 + dt * 0.03 : dt;
+    if (this.qualityCool > 0) {
+      this.qualityCool--;
+      return;
+    }
+    this.slowFrames = this.dtAvg > 21 ? (this.slowFrames || 0) + 1 : 0;
+    if (this.slowFrames > 180 && this.cfg.quality !== 'low') {
+      this.cfg.quality = this.cfg.quality === 'high' ? 'medium' : 'low';
+      this.r.setQuality(this.cfg.quality);
+      this.saveCfg();
+      this.notify(`QUALITY: ${this.cfg.quality.toUpperCase()} (AUTO)`, '#9fd8ff');
+      this.slowFrames = 0;
+      this.qualityCool = 600;
+      this.dtAvg = 0;
+    }
+  }
+
   toggleMode() {
     this.cfg.mode = this.cfg.mode === 'hd' ? 'arcade' : 'hd';
     this.r.setMode(this.cfg.mode);

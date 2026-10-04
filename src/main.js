@@ -85,6 +85,7 @@ async function boot() {
   let last = performance.now();
   let acc = 0;
   const frame = (now) => {
+    game.perf(now - last);
     acc += Math.min(250, now - last);
     last = now;
     let stepped = false;

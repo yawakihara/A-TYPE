@@ -1,3 +1,20 @@
+/* Oxanium (SIL Open Font License 1.1, see fonts/OFL-Oxanium.txt) — embedded so the HD UI looks the same offline. */
+@font-face {
+  font-family: "Oxanium";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url(fonts/oxanium-600.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Oxanium";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url(fonts/oxanium-800.woff2) format("woff2");
+}
+
 /* Layout: one full-bleed stage, the game canvas fills it; touch controls float above. */
 :root {
   color-scheme: dark;

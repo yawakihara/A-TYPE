@@ -64,6 +64,7 @@ const FS_FINAL = `${HEADER}
 uniform sampler2D uScene;
 uniform sampler2D uBloomA;
 uniform sampler2D uBloomB;
+uniform sampler2D uAmbTex;
 uniform vec4 uView;      // game rect in framebuffer px (x, y from bottom, w, h)
 uniform vec2 uScreen;    // framebuffer size
 uniform vec2 uSceneRes;  // scene texture size in px
@@ -165,12 +166,12 @@ void main() {
   } else {
     // ambient side fill: blurred continuation of the picture, heavily dimmed
     vec2 cg = clamp(g, vec2(0.0), vec2(1.0));
-    vec3 a = texture2D(uBloomB, vec2(cg.x, 1.0 - cg.y)).rgb;
+    vec3 a = texture2D(uAmbTex, vec2(cg.x, 1.0 - cg.y)).rgb;
     vec3 a2 = texture2D(uBloomA, vec2(clamp(cg.x, 0.02, 0.98), 1.0 - cg.y)).rgb;
     float dx = g.x < 0.0 ? -g.x : g.x - 1.0;
     float dy = g.y < 0.0 ? -g.y : (g.y > 1.0 ? g.y - 1.0 : 0.0);
     float fade = exp(-max(dx, dy) * 7.0);
-    col = (a * 1.4 + a2 * 0.5) * uAmbient * fade;
+    col = (a * 1.2 + a2 * 0.4) * uAmbient * fade;
   }
   col = mix(col, uFlashCol, uFlash);
   col += (hash(p + fract(uTime) * 91.7) - 0.5) * uGrain;
@@ -276,6 +277,7 @@ export class PostFX {
       b: this.makeTarget(qw, qh),
       c: this.makeTarget(ew, eh),
       d: this.makeTarget(ew, eh),
+      e: this.makeTarget(ew, eh),
     };
   }
 
@@ -330,9 +332,9 @@ export class PostFX {
         this.bind(0, T.b.tex, u.uTex);
         gl.uniform2f(u.uDir, 0, 1 / T.a.h);
       });
-      // wide level: from the *unthresholded* scene so the side ambience shows the whole picture
+      // wide bloom level: downsample the thresholded quarter-res buffer
       this.pass(this.progDown, T.c, (u) => {
-        this.bind(0, this.scene, u.uTex);
+        this.bind(0, T.a.tex, u.uTex);
         gl.uniform2f(u.uTexel, 0.5 / T.c.w, 0.5 / T.c.h);
       });
       for (let i = 0; i < 2; i++) {
@@ -346,10 +348,28 @@ export class PostFX {
         });
       }
     }
+    // letterbox ambience: a heavily blurred copy of the *whole* picture (only when bars exist)
+    if (p.ambient > 0 && (p.viewX > 2 || p.viewY > 2)) {
+      this.pass(this.progDown, T.e, (u) => {
+        this.bind(0, this.scene, u.uTex);
+        gl.uniform2f(u.uTexel, 0.5 / T.e.w, 0.5 / T.e.h);
+      });
+      for (let i = 0; i < 2; i++) {
+        this.pass(this.progBlur, T.d, (u) => {
+          this.bind(0, T.e.tex, u.uTex);
+          gl.uniform2f(u.uDir, (2 + i) / T.e.w, 0);
+        });
+        this.pass(this.progBlur, T.e, (u) => {
+          this.bind(0, T.d.tex, u.uTex);
+          gl.uniform2f(u.uDir, 0, (2 + i) / T.e.h);
+        });
+      }
+    }
     this.pass(this.progFinal, null, (u) => {
       this.bind(0, this.scene, u.uScene);
       this.bind(1, T.a.tex, u.uBloomA);
       this.bind(2, T.c.tex, u.uBloomB);
+      this.bind(3, T.e.tex, u.uAmbTex);
       const H = this.canvas.height;
       gl.uniform4f(u.uView, p.viewX, H - p.viewY - p.viewH, p.viewW, p.viewH);
       gl.uniform2f(u.uScreen, this.canvas.width, H);

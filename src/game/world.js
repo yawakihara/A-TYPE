@@ -345,19 +345,14 @@ export class World {
   update() {
     if (this.hitstop > 0) {
       this.hitstop--;
-      this.r.tick();
       return;
     }
     if (this.slowmo > 0) {
       this.slowmo--;
-      if (this.slowmo % 2 === 0) {
-        this.r.tick();
-        return;
-      }
+      if (this.slowmo % 2 === 0) return;
     }
     this.t++;
     this.phaseT++;
-    this.r.tick();
     if (this.timers.length) {
       const now = this.t;
       const due = this.timers.filter((x) => x.t <= now);

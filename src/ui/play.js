@@ -195,7 +195,6 @@ export class PlayScene {
       else g.goEnding(this.session);
     }
     // keep the world animating behind the tally
-    this.world.r.tick();
     this.world.t++;
     this.world.fx.update(0);
   }

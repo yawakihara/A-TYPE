@@ -267,3 +267,23 @@ export function wrap(r, str, maxW, opt = {}) {
   }
   return out;
 }
+
+/** Bake bitmap-font text straight into a 2D context (used inside sprite builders). */
+export function bakePixelText(ctx, str, x, y, k, color, align = 'left') {
+  const s = String(str).toUpperCase();
+  const w = pixelWidth(s, k);
+  let cx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  ctx.fillStyle = color;
+  for (const ch of s) {
+    const bits = MAP.get(ch);
+    if (bits) {
+      for (let yy = 0; yy < 7; yy++) {
+        for (let xx = 0; xx < 5; xx++) {
+          if (bits[yy] & (1 << (4 - xx))) ctx.fillRect(cx + xx * k, y + yy * k, k, k);
+        }
+      }
+    }
+    cx += CELL_W * k;
+  }
+  return w;
+}

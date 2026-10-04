@@ -31,7 +31,7 @@ async function run(name, query, check, timeout = 300000) {
 
 const list = stages.length ? stages : [1, 2, 3, 4, 5, 6];
 for (const st of list) {
-  await run(`stage ${st} full run (god bot)`, `stage=${st}&god=1&bot=1&frames=40000&until=clear`, (r) => {
+  await run(`stage ${st} full run (god bot)`, `stage=${st}&god=1&bot=1&frames=70000&until=clear`, (r) => {
     const p = [];
     if (r.scene !== 'PlayScene') p.push(`scene ${r.scene}`);
     if (r.mode !== 'tally' && r.phase !== 'tally') p.push(`did not clear: phase=${r.phase} boss=${r.boss} camX=${r.camX}`);

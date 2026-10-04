@@ -46,6 +46,11 @@ export class Enemy {
     this.fireMul = 1;
   }
 
+  setState(s) {
+    this.state = s;
+    this.st = 0;
+  }
+
   /** Call at the end of a subclass constructor to apply difficulty to hp. */
   setHp(hp) {
     this.hp = hp * this.w.diff.hp;

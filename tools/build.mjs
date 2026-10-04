@@ -31,7 +31,11 @@ const js = await esbuild.build({
 const code = js.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 
 const cssSrc = fs.readFileSync(path.join(root, 'src/style.css'), 'utf8');
-const css = (await esbuild.transform(cssSrc, { loader: 'css', minify: true })).code.trim();
+const cssInlined = cssSrc.replace(/url\((fonts\/[^)]+\.woff2)\)/g, (m, f) => {
+  const data = fs.readFileSync(path.join(root, 'src', f)).toString('base64');
+  return `url(data:font/woff2;base64,${data})`;
+});
+const css = (await esbuild.transform(cssInlined, { loader: 'css', minify: true })).code.trim();
 
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 let head = between(html, '<!--BUILD:HEAD-START-->', '<!--BUILD:HEAD-END-->');

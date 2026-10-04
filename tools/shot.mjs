@@ -7,7 +7,8 @@ const base = process.env.BASE || 'http://localhost:8123';
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
 });
-const page = await browser.newPage({ viewport: { width: Number(w), height: Number(h) } });
+const ctx = await browser.newContext({ viewport: { width: Number(w), height: Number(h) }, ignoreHTTPSErrors: true });
+const page = await ctx.newPage();
 const logs = [];
 page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
 page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack || ''}`));

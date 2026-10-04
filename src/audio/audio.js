@@ -94,6 +94,13 @@ export class AudioEngine {
     limiter.release.value = 0.18;
     this.master.connect(limiter);
     limiter.connect(ctx.destination);
+    if (ctx.createAnalyser) {
+      this.analyser = ctx.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.6;
+      limiter.connect(this.analyser);
+      this.freq = new Uint8Array(this.analyser.frequencyBinCount);
+    }
     this.musicBus = ctx.createGain();
     this.musicBus.gain.value = this.musicVol;
     this.musicFilter = ctx.createBiquadFilter();
@@ -164,6 +171,13 @@ export class AudioEngine {
     return buf;
   }
 
+  /** Byte spectrum of the master output (music room visualiser). */
+  spectrum() {
+    if (!this.analyser) return null;
+    this.analyser.getByteFrequencyData(this.freq);
+    return this.freq;
+  }
+
   get time() {
     return this.ctx ? this.ctx.currentTime : 0;
   }
@@ -203,7 +217,7 @@ export class AudioEngine {
   // ------------------------------------------------------------------ SFX
 
   sfx(name, arg) {
-    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (!this.ctx || this.ctx.state !== 'running' || this.demoMute) return;
     const fn = SFX[name];
     if (!fn) return;
     const t = this.ctx.currentTime;
@@ -224,6 +238,7 @@ export class AudioEngine {
   /** Continuous charge tone; k in [0,1]. */
   charge(k) {
     if (!this.ctx || this.ctx.state !== 'running') return;
+    if (this.demoMute) k = 0;
     const ctx = this.ctx;
     const t = ctx.currentTime;
     if (k <= 0) {

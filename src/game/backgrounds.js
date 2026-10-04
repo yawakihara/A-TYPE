@@ -196,7 +196,8 @@ class SpaceBG {
     this.opt = opt;
     this.stars = [new Stars(11, 70, 0.05, 0.8), new Stars(23, 50, 0.14, 1), new Stars(37, 26, 0.32, 1.25)];
     this.neb = null;
-    this.streak = 0;
+    this.streak = opt.streak || 0;
+    if (opt.streak) this.stars.forEach((s, i) => (s.par *= 1 + opt.streak * (2 + i * 2)));
   }
 
   draw(r, w) {
@@ -221,7 +222,193 @@ class SpaceBG {
   }
 }
 
+// ------------------------------------------------------------------ organic interiors
+
+/** Silhouette band of stalactites/stalagmites (screen space, parallax). */
+function rockBand(r, camX, par, color, seed, fromTop, depth, size) {
+  const ctx = r.ctx;
+  const span = 96;
+  const off = camX * par;
+  const first = Math.floor(off / span) - 1;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  const base = fromTop ? -10 : PH + 10;
+  ctx.moveTo(first * span - off, base);
+  for (let k = first; k < first + Math.ceil(W / span) + 3; k++) {
+    const x0 = k * span - off;
+    for (let j = 0; j < 4; j++) {
+      const h = hash1(k * 31 + j * 7 + seed);
+      const x = x0 + j * (span / 4);
+      const len = depth + h * size;
+      ctx.lineTo(x, fromTop ? len * 0.35 : PH - len * 0.35);
+      ctx.lineTo(x + span / 8, fromTop ? len : PH - len);
+    }
+  }
+  ctx.lineTo(W + span, base);
+  ctx.closePath();
+  ctx.fill();
+}
+
+class CaveBG {
+  constructor(opt) {
+    this.opt = opt;
+    this.neb = null;
+    this.spores = [];
+    const rng = new Rng(opt.seed || 7);
+    for (let i = 0; i < 60; i++) this.spores.push({ x: rng.range(0, W), y: rng.range(0, PH), z: rng.range(0.3, 1), ph: rng.range(0, 6.28), c: rng.next() < 0.6 ? opt.spore[0] : opt.spore[1] });
+  }
+
+  draw(r, w) {
+    const o = this.opt;
+    const t = w.t;
+    r.screen();
+    sky(r, o.sky[0], o.sky[1]);
+    if (!this.neb) this.neb = nebula(o.key, 1024, o.neb, o.seed || 7, o.density ?? 0.45);
+    drawStrip(r, this.neb, 1024, w.camX, 0.05, o.nebAlpha ?? 0.6);
+    // light shafts
+    if (!r.arcade && o.shafts) {
+      const ctx = r.ctx;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const x = ((i * 160 - w.camX * 0.08) % (W + 200) + W + 200) % (W + 200) - 100;
+        const g = ctx.createLinearGradient(x, 0, x + 60, PH);
+        g.addColorStop(0, `${o.shafts}26`);
+        g.addColorStop(1, `${o.shafts}00`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + 28 + Math.sin(t * 0.01 + i) * 6, 0);
+        ctx.lineTo(x + 110, PH);
+        ctx.lineTo(x + 40, PH);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    rockBand(r, w.camX, 0.12, o.far, 3, true, 30, 50);
+    rockBand(r, w.camX, 0.12, o.far, 9, false, 30, 50);
+    // hanging tendrils with glowing bulbs (mid layer)
+    const ctx = r.ctx;
+    const span = 70;
+    const par = 0.3;
+    const off = w.camX * par;
+    const first = Math.floor(off / span) - 1;
+    for (let k = first; k < first + Math.ceil(W / span) + 3; k++) {
+      const h = hash1(k * 13 + 5);
+      if (h < 0.35) continue;
+      const x = k * span - off + h * 30;
+      const len = 30 + h * 70;
+      const sway = Math.sin(t * 0.02 + k) * 6;
+      ctx.strokeStyle = o.mid;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x, -4);
+      ctx.quadraticCurveTo(x + sway, len * 0.5, x + sway * 1.5, len);
+      ctx.stroke();
+      r.glow(x + sway * 1.5, len, 5 + h * 3, o.spore[0], 0.5 + 0.3 * Math.sin(t * 0.05 + k));
+    }
+    rockBand(r, w.camX, 0.24, o.near, 17, true, 14, 36);
+    rockBand(r, w.camX, 0.24, o.near, 23, false, 14, 36);
+    // drifting spores
+    for (const s of this.spores) {
+      s.y -= 0.15 * s.z;
+      if (s.y < -4) s.y = PH + 4;
+      let x = (s.x - w.camX * s.z * 0.6) % W;
+      if (x < 0) x += W;
+      const a = 0.4 + 0.4 * Math.sin(t * 0.04 + s.ph);
+      r.glow(x, s.y + Math.sin(t * 0.02 + s.ph) * 4, 1.5 + s.z * 2.5, s.c, a);
+    }
+  }
+}
+
+/** Distant fleet: long hull silhouettes with lights, plus far-off battle flashes. */
+function fleetLayer(r, w) {
+  const ctx = r.ctx;
+  const t = w.t;
+  for (const [par, y, sc, col] of [[0.04, 70, 0.5, '#0a1018'], [0.09, 150, 0.8, '#0d141e']]) {
+    const span = 700 * sc;
+    const off = w.camX * par + t * 0.15 * sc;
+    const first = Math.floor(off / span) - 1;
+    for (let k = first; k < first + 3; k++) {
+      const x0 = k * span - off;
+      const h = hash1(k * 17 + y);
+      const L = (260 + h * 160) * sc;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x0 + L * 0.1, y - 10 * sc);
+      ctx.lineTo(x0 + L, y - 8 * sc);
+      ctx.lineTo(x0 + L + 18 * sc, y);
+      ctx.lineTo(x0 + L, y + 7 * sc);
+      ctx.lineTo(x0 + L * 0.08, y + 6 * sc);
+      ctx.closePath();
+      ctx.fill();
+      for (let i = 0; i < 4; i++) ctx.fillRect(x0 + L * (0.3 + i * 0.12), y - 10 * sc - (8 + hash1(k + i) * 14) * sc, 8 * sc, (8 + hash1(k + i) * 14) * sc);
+      for (let i = 0; i < 6; i++) if (Math.sin(t * 0.05 + i + k) > 0.3) r.glow(x0 + L * (0.15 + i * 0.13), y - 2 * sc, 2, '#ffb060', 0.6);
+      r.glow(x0 + L + 20 * sc, y, 8 * sc, '#6ab0ff', 0.5);
+    }
+  }
+  // far-off battle flashes
+  const k = Math.floor(t / 90);
+  const ph = t % 90;
+  if (ph < 20) {
+    const fx = (hash1(k * 3) * W);
+    const fy = 30 + hash1(k * 5) * (PH - 60);
+    r.glow(fx, fy, 6 + ph, '#ffc080', (20 - ph) / 30);
+  }
+}
+
 export const BACKGROUNDS = {
+  fleet: () =>
+    new SpaceBG({
+      key: 'fleet',
+      sky: ['#020308', '#0c0a18'],
+      neb: ['#4a1a1a', '#1a2a5a', '#ff9040'],
+      seed: 9,
+      density: 0.5,
+      nebAlpha: 0.75,
+      streak: 1.2,
+      extra: fleetLayer,
+    }),
+  cave: () =>
+    new CaveBG({
+      key: 'cave',
+      sky: ['#0b0310', '#1e0a22'],
+      neb: ['#3a0a3a', '#0a2a3a', '#ff70c0'],
+      far: '#1a0819',
+      mid: '#2e0f2e',
+      near: '#120510',
+      spore: ['#4ff0c0', '#ff7ab8'],
+      shafts: '#7af0d0',
+      seed: 7,
+    }),
+  title: () =>
+    new SpaceBG({
+      key: 'title',
+      sky: ['#02030a', '#0a0f22'],
+      neb: ['#14306a', '#4a1a6a', '#3ff0ff'],
+      seed: 5,
+      density: 0.6,
+      planet: { x: 330, y: 186, r: 70, base: ['#7a3a6a', '#3a1238', '#0a0410'], atmo: '#ff70b0' },
+    }),
+  prologue: () =>
+    new SpaceBG({
+      key: 'prologue',
+      sky: ['#010104', '#08040e'],
+      neb: ['#3a0a2a', '#1a0a3a', '#ff4080'],
+      seed: 13,
+      density: 0.45,
+      planet: { x: 290, y: 120, r: 54, base: ['#5a7aa8', '#1a3060', '#04081a'], atmo: '#ff6aa0' },
+    }),
+  ending: () =>
+    new SpaceBG({
+      key: 'ending',
+      sky: ['#030818', '#1a1430'],
+      neb: ['#1a4a8a', '#8a4a3a', '#ffd0a0'],
+      seed: 21,
+      density: 0.5,
+      planet: { x: 300, y: 200, r: 90, base: ['#6ab0ff', '#1a4a9a', '#030a20'], atmo: '#9fd8ff' },
+    }),
   station: () =>
     new SpaceBG({
       key: 'station',

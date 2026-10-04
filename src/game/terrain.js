@@ -255,7 +255,7 @@ export class Terrain {
       const h = hash1(i * 7 + (isFloor ? 3 : 101));
       const x = i * STEP;
       const y = arr[i];
-      if (theme === 'hull' || theme === 'wreck') {
+      if (theme === 'hull' || theme === 'wreck' || theme === 'warship') {
         if (h < 0.035) {
           const on = Math.sin(t * 0.08 + i) > -0.2;
           r.rect(x - 1, y + dir * 4 - 1, 2, 2, on ? T.glow : '#203038');

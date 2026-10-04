@@ -287,6 +287,7 @@ function rock(S, pal) {
 
 export const THEMES = {
   hull: { fn: hull, pal: { base: '#2c3548', hi: '#8c9ab4', dark: '#0d1119', hazard: '#d8a018', light: '#ffb347', light2: '#38f2d4' }, rim: '#9fb4d8', edge: '#0a0d14', glow: '#38f2d4' },
+  warship: { fn: hull, pal: { base: '#3c4642', hi: '#93a39a', dark: '#0e1311', hazard: '#d8a018', light: '#ff4030', light2: '#ffb347' }, rim: '#b0c4b8', edge: '#070a09', glow: '#ff5040' },
   wreck: { fn: hull, pal: { base: '#3a3634', hi: '#9a8a80', dark: '#141010', hazard: '#c86420', light: '#ff5040', light2: '#ffb347' }, rim: '#c0a898', edge: '#0d0a0a', glow: '#ff7040' },
   flesh: { fn: flesh, pal: { base: '#7a2c5a', rim: '#1a0614', hi: '#d070a0', glow: '#4ff0c0', seed: 3, cells: 8 }, rim: '#e890c0', edge: '#12040e', glow: '#4ff0c0' },
   bone: { fn: bone, pal: { bone: '#c8b896', dark: '#1a120c', flesh: '#5a1a22' }, rim: '#fff0d0', edge: '#100a08', glow: '#ff9050' },

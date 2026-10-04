@@ -28,6 +28,7 @@ export class Game {
     this.opt = opt;
     this.cfg = { ...DEFAULT_CFG, ...load(STORE.cfg, {}) };
     if (!this.cfg.lang) this.cfg.lang = (navigator.language || 'en').startsWith('ja') ? 'ja' : 'en';
+    this.defaultScores = defaultScores;
     this.scores = load(STORE.scores, null) || defaultScores();
     this.progress = load(STORE.progress, { reached: [1, 1, 1], cleared: [false, false, false] });
     this.medals = load(STORE.medals, {});
@@ -106,6 +107,7 @@ export class Game {
 
   update() {
     this.t++;
+    this.r.tick();
     const inp = this.input;
     inp.update();
     if (inp.pressed('mode')) this.toggleMode();

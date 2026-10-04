@@ -69,7 +69,8 @@ export class Enemy {
     if (this.dead) return 'none';
     const type = box ? box.type : 'body';
     if (type === 'shield') return 'armor';
-    if (type === 'armor' && src !== 'pod') return 'armor';
+    if (box && box.podOnly && src !== 'pod') return 'armor';
+    if (type === 'armor' && src !== 'pod' && src !== 'beam') return 'armor';
     if (this.inv > 0) return 'armor';
     if (box && box.part && box.part.hp !== undefined) {
       const part = box.part;

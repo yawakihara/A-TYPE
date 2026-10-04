@@ -51,9 +51,34 @@ export class Pod {
     return this.level > prev;
   }
 
+  /** Embed in a host's core (final boss): the pod grinds it until ejected or recalled. */
+  lodge(host) {
+    if (this.state !== 'launch') return;
+    this.state = 'lodged';
+    this.host = host;
+    this.w.sfx('podAttach');
+    this.w.r.shake(0.25);
+    this.w.rumble(0.6, 0.4, 160);
+    this.w.fx.ring(this.x, this.y, 30, '#ffffff', 18);
+  }
+
+  eject() {
+    if (this.state !== 'lodged') return;
+    this.state = 'free';
+    this.host = null;
+    this.noDock = 30;
+    this.x -= 14;
+  }
+
   /** Button: launch when docked, recall otherwise. */
   command() {
     const w = this.w;
+    if (this.state === 'lodged') {
+      this.host = null;
+      this.state = 'recall';
+      w.sfx('podRecall');
+      return;
+    }
     if (this.attached) {
       this.side = this.state === 'front' ? 1 : -1;
       this.state = 'launch';
@@ -102,6 +127,19 @@ export class Pod {
         }
         break;
       }
+      case 'lodged': {
+        const h = this.host;
+        if (!h || h.dead || h.dying || !h.lodgePoint) {
+          this.eject();
+          break;
+        }
+        const lp = h.lodgePoint();
+        this.x = lerp(this.x, lp.x, 0.4);
+        this.y = lerp(this.y, lp.y, 0.4);
+        this.spinV = 0.4;
+        if (this.t % 4 === 0) this.w.fx.sparks(this.x, this.y, 2, '#fff0c0', 2.5, 10);
+        break;
+      }
       case 'recall': {
         const dx = p.x - this.x;
         const dy = p.y - this.y;
@@ -131,7 +169,7 @@ export class Pod {
     if (this.trail.length > 10) this.trail.splice(0, 2);
     for (let i = 0; i < this.trail.length; i += 2) this.trail[i] += w.dx;
     // docking
-    if (!this.attached && this.noDock <= 0 && p.alive && this.state !== 'launch') {
+    if (!this.attached && this.noDock <= 0 && p.alive && this.state !== 'launch' && this.state !== 'lodged') {
       const near = Math.abs(this.x - p.x) < this.r + 12 && Math.abs(this.y - p.y) < this.r + 4;
       if (near) {
         this.state = this.x >= p.x ? 'front' : 'back';
@@ -157,6 +195,7 @@ export class Pod {
 
   /** Contact damage per frame (world calls this for overlapping enemies). */
   contactDamage() {
+    if (this.state === 'lodged') return 1.0;
     if (this.state === 'launch') return 1.2;
     if (this.attached) return 0.4;
     return 0.3;

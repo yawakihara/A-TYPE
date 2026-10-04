@@ -67,6 +67,30 @@ export class Terrain {
     this.blocks.sort((a, b) => a.x - b.x);
     this.vis = [];
     this.dyn = [];
+    // living walls: [x0, x1, amp, speed, wavelength]
+    this.pulse = def.pulse || [];
+    this.time = 0;
+  }
+
+  /** Peristaltic wall motion (positive = the passage narrows). */
+  pulseAt(x) {
+    let v = 0;
+    for (const [x0, x1, amp, speed, wl] of this.pulse) {
+      if (x < x0 || x > x1) continue;
+      const edge = Math.min(1, (x - x0) / 80, (x1 - x) / 80);
+      v += amp * edge * (0.5 + 0.5 * Math.sin(this.time * speed - (x / wl) * Math.PI * 2));
+    }
+    return v;
+  }
+
+  ceilS(i) {
+    const v = this.ceil[i];
+    return v === NONE_C || !this.pulse.length ? v : v + this.pulseAt(i * STEP);
+  }
+
+  floorS(i) {
+    const v = this.floor[i];
+    return v === NONE_F || !this.pulse.length ? v : v - this.pulseAt(i * STEP);
   }
 
   /** Called once per frame with the camera so block queries only scan nearby blocks. */
@@ -88,7 +112,8 @@ export class Terrain {
     const a = this.ceil[i];
     const b = this.ceil[i + 1];
     if (a === NONE_C || b === NONE_C) return Math.max(a, b) === NONE_C ? NONE_C : f - i < 0.5 ? a : b;
-    return a + (b - a) * (f - i);
+    const v = a + (b - a) * (f - i);
+    return this.pulse.length ? v + this.pulseAt(x) : v;
   }
 
   floorAt(x) {
@@ -99,7 +124,8 @@ export class Terrain {
     const a = this.floor[i];
     const b = this.floor[i + 1];
     if (a === NONE_F || b === NONE_F) return Math.min(a, b) === NONE_F ? NONE_F : f - i < 0.5 ? a : b;
-    return a + (b - a) * (f - i);
+    const v = a + (b - a) * (f - i);
+    return this.pulse.length ? v - this.pulseAt(x) : v;
   }
 
   blockAt(x, y) {
@@ -190,12 +216,17 @@ export class Terrain {
   }
 
   drawSurface(r, pat, T, i0, i1, isFloor, t) {
-    const arr = isFloor ? this.floor : this.ceil;
+    const raw = isFloor ? this.floor : this.ceil;
     const none = isFloor ? NONE_F : NONE_C;
+    let arr = raw;
+    if (this.pulse.length) {
+      arr = this.tmp || (this.tmp = new Float32Array(this.n));
+      for (let i = i0; i <= i1; i++) arr[i] = isFloor ? this.floorS(i) : this.ceilS(i);
+    }
     const ctx = r.ctx;
     const far = isFloor ? PH + 40 : -40;
     const dir = isFloor ? 1 : -1;
-    for (const [a, b] of this.runs(arr, none, i0, i1)) {
+    for (const [a, b] of this.runs(raw, none, i0, i1)) {
       if (b <= a) continue;
       const edge = (off) => {
         ctx.moveTo(a * STEP, far);

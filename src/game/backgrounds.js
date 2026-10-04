@@ -309,6 +309,15 @@ class CaveBG {
     }
     rockBand(r, w.camX, 0.24, o.near, 17, true, 14, 36);
     rockBand(r, w.camX, 0.24, o.near, 23, false, 14, 36);
+    if (o.pulse) {
+      // heartbeat: the whole tunnel flushes red
+      const beat = Math.max(0, Math.sin(t * 0.07)) ** 6;
+      const g2 = ctx.createRadialGradient(W / 2, PH / 2, PH * 0.2, W / 2, PH / 2, W * 0.75);
+      g2.addColorStop(0, 'rgba(255,40,40,0)');
+      g2.addColorStop(1, `rgba(255,40,40,${0.12 + beat * 0.18})`);
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, W, PH);
+    }
     // drifting spores
     for (const s of this.spores) {
       s.y -= 0.15 * s.z;
@@ -358,7 +367,121 @@ function fleetLayer(r, w) {
   }
 }
 
+// ------------------------------------------------------------------ foundry interior
+
+class FoundryBG {
+  constructor() {
+    this.embers = [];
+    const rng = new Rng(41);
+    for (let i = 0; i < 50; i++) this.embers.push({ x: rng.range(0, W), y: rng.range(0, PH), z: rng.range(0.3, 1), ph: rng.range(0, 6.28) });
+  }
+
+  draw(r, w) {
+    const t = w.t;
+    const ctx = r.ctx;
+    r.screen();
+    sky(r, '#0a0605', '#1f0e06');
+    // molten haze along the bottom
+    const g = ctx.createLinearGradient(0, PH * 0.55, 0, PH);
+    g.addColorStop(0, 'rgba(255,90,20,0)');
+    g.addColorStop(1, 'rgba(255,90,20,0.22)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, PH * 0.55, W, PH * 0.45);
+    // far furnaces + chimneys
+    const span = 150;
+    for (const [par, col, base, sc] of [[0.08, '#120a07', PH - 30, 0.8], [0.18, '#180e09', PH - 10, 1.1]]) {
+      const off = w.camX * par;
+      const first = Math.floor(off / span) - 1;
+      for (let k = first; k < first + Math.ceil(W / span) + 3; k++) {
+        const x0 = k * span - off;
+        const h = hash1(k * 7 + Math.floor(par * 100));
+        const fw = (50 + h * 50) * sc;
+        const fh = (50 + h * 70) * sc;
+        ctx.fillStyle = col;
+        ctx.fillRect(x0, base - fh, fw, fh + 20);
+        // chimney
+        const cx = x0 + fw * (0.2 + h * 0.5);
+        ctx.fillRect(cx, base - fh - 70 * sc, 10 * sc, 70 * sc);
+        // furnace mouth glow
+        const flick = 0.6 + 0.4 * Math.sin(t * 0.13 + k * 3);
+        r.glow(x0 + fw * 0.5, base - fh * 0.35, 14 * sc, '#ff6a1a', 0.35 * flick);
+        ctx.fillStyle = `rgba(255,120,40,${0.5 * flick})`;
+        ctx.fillRect(x0 + fw * 0.35, base - fh * 0.45, fw * 0.3, fh * 0.18);
+      }
+    }
+    // gantry lattice (mid layer)
+    const par = 0.32;
+    const off = w.camX * par;
+    ctx.strokeStyle = '#2a1a12';
+    ctx.lineWidth = 1.6;
+    const gy = 30;
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(W, gy);
+    ctx.moveTo(0, gy + 10);
+    ctx.lineTo(W, gy + 10);
+    for (let x = -((off % 20) + 20); x < W + 20; x += 20) {
+      ctx.moveTo(x, gy);
+      ctx.lineTo(x + 10, gy + 10);
+      ctx.lineTo(x + 20, gy);
+    }
+    ctx.stroke();
+    // hanging chains with hooks
+    for (let k = Math.floor(off / 90) - 1; k < Math.floor(off / 90) + 7; k++) {
+      const x = k * 90 - off + 40;
+      const len = 40 + hash1(k * 11) * 60;
+      const sway = Math.sin(t * 0.02 + k) * 3;
+      ctx.strokeStyle = '#3a2618';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, gy + 10);
+      ctx.lineTo(x + sway, gy + 10 + len);
+      ctx.stroke();
+      ctx.fillStyle = '#3a2618';
+      ctx.fillRect(x + sway - 3, gy + 10 + len, 6, 4);
+    }
+    // embers rising
+    for (const e of this.embers) {
+      e.y -= 0.35 * e.z;
+      if (e.y < -4) {
+        e.y = PH + 4;
+      }
+      let x = (e.x - w.camX * e.z * 0.5 + Math.sin(t * 0.02 + e.ph) * 6) % W;
+      if (x < 0) x += W;
+      r.glow(x, e.y, 1.2 + e.z * 1.8, '#ff9a3a', 0.4 + 0.4 * Math.sin(t * 0.08 + e.ph));
+    }
+  }
+}
+
 export const BACKGROUNDS = {
+  heart: () =>
+    new CaveBG({
+      key: 'heart',
+      sky: ['#0c0104', '#26040e'],
+      neb: ['#5a0a1a', '#1a0418', '#ff3050'],
+      far: '#1a0208',
+      mid: '#3a0612',
+      near: '#0c0104',
+      spore: ['#ff5a70', '#ffd0dc'],
+      seed: 53,
+      density: 0.55,
+      nebAlpha: 0.75,
+      pulse: true,
+    }),
+  gut: () =>
+    new CaveBG({
+      key: 'gut',
+      sky: ['#140306', '#2c0810'],
+      neb: ['#4a0a14', '#2a0a2a', '#ff6040'],
+      far: '#1e050a',
+      mid: '#3a0c14',
+      near: '#120306',
+      spore: ['#ff9050', '#ffd0a0'],
+      seed: 31,
+      density: 0.5,
+      pulse: true,
+    }),
+  foundry: () => new FoundryBG(),
   fleet: () =>
     new SpaceBG({
       key: 'fleet',

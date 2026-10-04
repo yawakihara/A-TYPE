@@ -369,6 +369,7 @@ export class World {
     this.dx = this.camX - prev;
     this.r.camX = this.camX;
     this.r.camY = this.camY;
+    this.terrain.time = this.t;
     this.terrain.prepare(this.camX);
     this.terrain.dyn.length = 0;
     for (const e of this.enemies) if (e.solid && !e.dead) e.pushSolids(this.terrain.dyn);
@@ -502,14 +503,32 @@ export class World {
       for (const e of enemies) {
         if (e.dead || e.untouchable) continue;
         const boxes = e.boxes();
-        for (const b of boxes) {
-          if (b.noShot || (b.part && b.part.dead)) continue;
-          if (!boxHit(sh.x, sh.y, sh.hw, sh.hh, b.x, b.y, b.hw, b.hh)) continue;
-          if (s.pierce && !s.canHit(e, this)) break;
-          const res = e.damage(s.dmg, s.kind, b);
-          if (res !== 'none') s.onHit(this, res, e, b);
-          break;
+        let hit = null;
+        if (s.kind === 'beam') {
+          // the LANCE pierces armour: strike the most vulnerable overlapping box behind it
+          let rank = -1;
+          for (const b of boxes) {
+            if (b.noShot || (b.part && b.part.dead)) continue;
+            if (!boxHit(sh.x, sh.y, sh.hw, sh.hh, b.x, b.y, b.hw, b.hh)) continue;
+            const r = b.type === 'weak' ? 3 : b.type === 'body' ? 2 : 1;
+            if (r > rank) {
+              rank = r;
+              hit = b;
+            }
+          }
+        } else {
+          for (const b of boxes) {
+            if (b.noShot || (b.part && b.part.dead)) continue;
+            if (boxHit(sh.x, sh.y, sh.hw, sh.hh, b.x, b.y, b.hw, b.hh)) {
+              hit = b;
+              break;
+            }
+          }
         }
+        if (!hit) continue;
+        if (s.pierce && !s.canHit(e, this)) continue;
+        const res = e.damage(s.dmg, s.kind, hit);
+        if (res !== 'none') s.onHit(this, res, e, hit);
         if (s.dead) break;
       }
     }
@@ -529,6 +548,7 @@ export class World {
               d += 4;
               this.r.shake(0.08);
             }
+            if (b.lodge && pod.state === 'launch') pod.lodge(e);
             const res = e.damage(d, 'pod', b);
             if (res === 'hit' && this.t % 4 === 0) this.fx.sparks(pod.x + (b.x - pod.x) * 0.5, pod.y + (b.y - pod.y) * 0.5, 2, '#ffe0f0', 2.5, 8);
             pod.grind = 6;

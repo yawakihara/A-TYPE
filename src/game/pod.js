@@ -1,12 +1,15 @@
 /**
  * AEGIS — the detachable crystal pod (the genre's signature device, original design).
  *  - indestructible, absorbs ordinary bullets, grinds enemies it touches, passes through walls
- *  - docks to the front or rear depending on which side touches the ship
- *  - can be launched as a battering ram and recalled
+ *  - docks to the front or rear depending on which side touches the ship; when first summoned it
+ *    overtakes the ship and locks onto the nose
+ *  - can be launched as a battering ram and recalled; a recalled pod drifts home slowly along its
+ *    own lane: meet it in that lane and it docks on the near side, dodge it and it slips past and
+ *    swings round onto the far side
  *  - its crystal colour selects the laser: red HELIX, blue PRISM, yellow CRAWLER
  * Satellite bits are also here.
  */
-import { W } from '../config.js';
+import { W, PH } from '../config.js';
 import { clamp, lerp, dist2 } from '../core/math.js';
 import { frand } from '../core/rng.js';
 import { Pellet, Helix, Prism, Crawler } from './weapons.js';
@@ -14,6 +17,15 @@ import { POD_COLORS } from '../gfx/art/player.js';
 
 const RADIUS = [0, 7.5, 9, 10.5];
 const DOCK = [0, 15, 16.5, 18];
+/**
+ * Recall: starts slow and eases up; it may cross the screen briskly but slows as it nears the
+ * ship (below the ship's own speed) so there is always time to choose a side.
+ */
+const RECALL_START = 0.5;
+const RECALL_ACCEL = 0.06;
+const recallCap = (dist) => clamp(1.3 + dist * 0.012, 1.6, 3.4);
+/** How quickly a recalled pod drifts toward the ship's altitude while still out of reach. */
+const RECALL_FOLLOW = 0.02;
 
 export class Pod {
   constructor(w, color) {
@@ -75,7 +87,7 @@ export class Pod {
     const w = this.w;
     if (this.state === 'lodged') {
       this.host = null;
-      this.state = 'recall';
+      this.startRecall();
       w.sfx('podRecall');
       return;
     }
@@ -83,14 +95,23 @@ export class Pod {
       this.side = this.state === 'front' ? 1 : -1;
       this.state = 'launch';
       this.vx = this.side * 6.2;
+      this.launchDist = 0;
       this.noDock = 22;
       this.hitSet = new Set();
       w.sfx('podLaunch');
       w.rumble(0.3, 0.2, 80);
     } else if (this.state === 'free' || this.state === 'launch' || this.state === 'enter') {
-      this.state = 'recall';
+      this.startRecall();
       w.sfx('podRecall');
     }
+  }
+
+  startRecall() {
+    this.state = 'recall';
+    this.recallDelay = 10; // spins up for a moment before it sets off: time to react
+    this.recallV = RECALL_START;
+    this.recallFrom = this.x >= this.w.player.x ? 1 : -1; // +1: coming from ahead of the ship
+    this.swing = false;
   }
 
   update() {
@@ -104,11 +125,27 @@ export class Pod {
     const prevY = this.y;
     switch (this.state) {
       case 'enter': {
-        // drifts in from the left edge, matching the ship's altitude
-        this.x += w.dx + 2.6;
-        this.y = lerp(this.y, p.y, 0.06);
-        if (this.x - w.camX > W * 0.45) this.state = 'free';
-        this.spinV = 0.1;
+        // flies in from behind in a lane just above or below the ship, overtakes it, then swings
+        // in onto the nose
+        if (!p.alive || this.t > 420) {
+          this.state = 'free';
+          break;
+        }
+        if (this.passOff === undefined) this.passOff = p.y < PH / 2 ? 24 : -24;
+        if (!this.ahead && this.x > p.x + 14) this.ahead = true;
+        if (this.ahead) {
+          const dx = p.x + DOCK[this.level] + 1 - this.x;
+          const dy = p.y - this.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const sp = Math.min(d, 2.4);
+          this.x += w.dx + (dx / d) * sp;
+          this.y += (dy / d) * sp;
+        } else {
+          this.x += w.dx + Math.max(0, Math.min(3.4, p.x + 40 - this.x));
+          this.y = lerp(this.y, p.y + this.passOff, 0.2);
+          this.noDock = 2; // no docking while it overtakes
+        }
+        this.spinV = 0.12;
         break;
       }
       case 'free': {
@@ -119,10 +156,12 @@ export class Pod {
       }
       case 'launch': {
         this.x += w.dx + this.vx;
+        this.launchDist = (this.launchDist || 0) + Math.abs(this.vx);
         this.spinV = 0.25;
         const sx = this.x - w.camX;
-        // a backward throw stops short of the edge so the ship can slip behind it and catch it nose-first
-        if ((this.side > 0 && sx > W - 34) || (this.side < 0 && sx < 56)) {
+        // a forward throw flies to the far side; a backward one always travels a clear distance
+        // from the ship, stopping short of the edge when it can so there is room to slip behind it
+        if ((this.side > 0 && sx > W - 34) || (this.side < 0 && ((sx < 56 && this.launchDist >= 48) || sx < 16))) {
           this.state = 'free';
           this.vx = 0;
         }
@@ -142,14 +181,35 @@ export class Pod {
         break;
       }
       case 'recall': {
-        const dx = p.x - this.x;
-        const dy = p.y - this.y;
-        const d = Math.hypot(dx, dy) || 1;
-        const sp = Math.min(d, 5.5);
-        this.x += w.dx + (dx / d) * sp;
-        this.y += (dy / d) * sp;
+        // drifts home at a gentle, easing pace along its own lane, aiming through the ship:
+        // meet it in that lane and it docks on the side it came from; dodge it and it slips past,
+        // then swings round onto the far side (so a rear pod can be taken on the nose)
+        if (!p.alive) {
+          this.state = 'free';
+          break;
+        }
+        if (this.recallDelay > 0) {
+          this.recallDelay--;
+          this.x += w.dx;
+          this.spinV = lerp(this.spinV, 0.35, 0.2);
+          break;
+        }
+        this.recallV = Math.min(recallCap(Math.abs(this.x - p.x)), (this.recallV ?? RECALL_START) + RECALL_ACCEL);
+        const from = this.recallFrom ?? (this.x >= p.x ? 1 : -1);
+        if (!this.swing && (this.x - p.x) * from < -6) this.swing = true;
+        let tx;
+        let follow;
+        if (this.swing) {
+          tx = p.x - from * (DOCK[this.level] + 1);
+          follow = 0.12;
+        } else {
+          tx = p.x - from * 30;
+          follow = Math.abs(this.x - p.x) > 30 ? RECALL_FOLLOW : 0; // keep its lane while passing
+        }
+        const dx = tx - this.x;
+        this.x += w.dx + Math.sign(dx) * Math.min(Math.abs(dx), this.recallV);
+        this.y = lerp(this.y, p.y, follow);
         this.spinV = 0.2;
-        if (!p.alive) this.state = 'free';
         break;
       }
       case 'front':
@@ -265,6 +325,7 @@ export class Pod {
     const col = POD_COLORS[this.color];
     const lv = this.level - 1;
     const ctx = r.ctx;
+    const p = this.w.player;
     // motion trail when moving fast
     if (this.state === 'launch' || this.state === 'recall' || this.state === 'enter') {
       for (let i = 0; i < this.trail.length; i += 2) {
@@ -274,7 +335,6 @@ export class Pod {
     }
     // tether to the ship while docked
     if (this.attached && !r.arcade) {
-      const p = this.w.player;
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = col.glow;
       ctx.globalAlpha = 0.35 + Math.sin(this.t * 0.3) * 0.15;
@@ -285,6 +345,29 @@ export class Pod {
       ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
+    }
+    // while loose, mark the side of the ship it would dock on if it arrived now
+    if ((this.state === 'free' || this.state === 'recall' || this.state === 'enter') && p.alive && p.visible !== false) {
+      const dist = Math.hypot(this.x - p.x, this.y - p.y);
+      if (dist < 170) {
+        // a pulsing half-ring just off the nose (or the tail), opening away from the ship
+        const front = this.x >= p.x;
+        const s = front ? 1 : -1;
+        const mx = p.x + (front ? DOCK[this.level] + 1 : -DOCK[this.level] - 3);
+        const a = (0.6 + 0.3 * Math.sin(this.t * 0.25)) * Math.min(1, (170 - dist) / 40);
+        const rr = this.r + 2;
+        r.glow(mx + s * 4, p.y, rr, col.glow, 0.25 * a);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = col.glow;
+        ctx.lineWidth = r.arcade ? 1 : 1.4;
+        ctx.beginPath();
+        if (front) ctx.arc(mx, p.y, rr, -Math.PI / 2 + 0.25, Math.PI / 2 - 0.25);
+        else ctx.arc(mx, p.y, rr, Math.PI / 2 + 0.25, Math.PI * 1.5 - 0.25);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     r.glow(this.x, this.y, this.r * 2.2 + (this.flash > 0 ? 10 : 0) + (this.grind ? 4 : 0), col.glow, 0.45);
     // crystal cage: shards orbit when free, open into a forward-facing claw when docked

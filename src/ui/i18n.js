@@ -88,8 +88,8 @@ export const HOWTO = [
   {
     title: { en: 'AEGIS', ja: '制御体〈イージス〉' },
     lines: {
-      en: ['Shoot an item carrier and grab the crystal to summon AEGIS.', 'AEGIS is indestructible. It absorbs ordinary bullets and grinds enemies it touches.', 'Touch it with your nose to dock in front, with your tail to dock behind.', 'Press X to launch it as a battering ram; press again to call it back.', 'While detached it fires on its own and follows your altitude.'],
-      ja: ['アイテムキャリアを倒し、クリスタルを取るとイージスが飛来する。', 'イージスは無敵。通常弾を吸収し、触れた敵を削り倒す。', '機首で触れると前方、尾部で触れると後方に装着。', 'Xで前方(後方)へ射出、もう一度押すと手元へ戻る。', '分離中は自律射撃し、自機の高さに追従する。'],
+      en: ['Grab a crystal and AEGIS docks on your nose.', 'Indestructible: absorbs bullets, grinds enemies.', 'X launches it. Press X again and it drifts home slowly: wait in its path to dock it on that side, or dodge it and it swings round to the other.', 'A glowing arc marks the side it will dock on.', 'While detached it fires on its own.'],
+      ja: ['クリスタルを取るとイージスが飛来し、機首に付く。', 'イージスは無敵。通常弾を吸収し、触れた敵を削り倒す。', 'Xで前方(後方)へ射出、もう一度押すと呼び戻す。', '呼び戻すとゆっくり戻る。そのまま待てば来た側に付き、上下にかわすと回り込んで反対側に付く。', '自機に光る半円が、付く側の目印。分離中は自律射撃する。'],
     },
   },
   {

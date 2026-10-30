@@ -56,7 +56,8 @@ export function makeBot(getWorld) {
     let prefY = (lodgeBox ? lodgeBox.y : target ? target.y : PH / 2) + (lodgeBox ? 0 : jy);
     // AEGIS does most good docked on the nose: catch a loose pod from the left, going around it
     const pd = w.pod;
-    const loose = pd && (pd.state === 'free' || pd.state === 'enter');
+    // (a newly summoned pod flies onto the nose by itself; only a parked one needs fetching)
+    const loose = pd && pd.state === 'free';
     if (loose && pd.x - camX > 26) {
       if (p.x < pd.x - 12) {
         prefX = pd.x - 14;

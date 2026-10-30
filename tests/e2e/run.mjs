@@ -136,6 +136,57 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }
+// AEGIS docking: a new pod locks onto the nose; a recalled pod drifts home slowly, docking on the
+// side it comes from unless the pilot dodges it, in which case it swings round to the other side
+{
+  const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${base}/index.html?stage=1&god=1&frames=1`);
+  await page.waitForFunction(() => document.title === 'done', null, { timeout: 60000 });
+  const r = await page.evaluate(() => {
+    const g = window.__AL;
+    const w = g.scene.world;
+    const p = w.player;
+    const out = [];
+    const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(); };
+    const tap = (code) => { g.input.keys.add(code); step(1); g.input.keys.delete(code); step(1); };
+    const until = (fn, max = 600) => { let i = 0; for (; i < max && !fn(); i++) step(1); return i; };
+    // recall with the ship holding `keys` during frames [from, to) after pressing X
+    const recall = (start, from, to, keys) => {
+      w.pod.state = start;
+      step(30);
+      tap('KeyX');
+      until(() => w.pod.state === 'free', 200);
+      tap('KeyX');
+      let f = 0;
+      for (; f < 600 && !w.pod.attached; f++) {
+        g.input.keys.clear();
+        if (f >= from && f < to) for (const k of keys) g.input.keys.add(k);
+        step(1);
+      }
+      g.input.keys.clear();
+      return w.pod.state;
+    };
+    step(90);
+    w.collect({ type: 'crystal', color: 'red' });
+    until(() => w.pod && w.pod.attached, 600);
+    out.push(`summon:${w.pod.state}`);
+    out.push(`front-wait:${recall('front', 0, 0, [])}`);
+    out.push(`back-wait:${recall('back', 0, 0, [])}`);
+    out.push(`back-dodge:${recall('back', 0, 14, ['ArrowUp'])}`);
+    out.push(`back-late-dodge:${recall('back', 12, 26, ['ArrowDown'])}`);
+    out.push(`gear:${p.gear}`);
+    return out;
+  });
+  const expect = ['summon:front', 'front-wait:front', 'back-wait:back', 'back-dodge:front', 'back-late-dodge:front', 'gear:0'];
+  const problems = [...errors];
+  for (const e of expect) if (!r.includes(e)) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
+  if (problems.length) failed++;
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  AEGIS docking: summon, recall, dodge to swap sides  ${JSON.stringify(r)}`);
+  for (const p of problems) console.log(`      ${p}`);
+  await page.close();
+}
 // every menu / UI scene renders in both graphics modes and both languages without errors
 for (const sc of ['menu', 'options', 'music', 'records', 'howto', 'credits', 'stages', 'difficulty', 'prologue', 'demo', 'ending']) {
   for (const [mode, lang] of [['hd', 'en'], ['arcade', 'ja']]) await run(`scene ${sc} (${mode}/${lang})`, `scene=${sc}&mode=${mode}&lang=${lang}&frames=240`, null, 60000);

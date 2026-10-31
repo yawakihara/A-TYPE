@@ -2,7 +2,7 @@
  * One stage of play: camera/scroll, timeline events, checkpoints, entities, collisions,
  * death/respawn rules, items and scoring, boss and stage-clear flow.
  */
-import { W, PH, DIFFICULTIES, EXTENDS, EXTEND_EVERY, SHIELD_IFRAMES } from '../config.js';
+import { W, PH, DIFFICULTIES, EXTENDS, EXTEND_EVERY, SHIELD_IFRAMES, SHIELD_MAX } from '../config.js';
 import { boxHit, circleBox, clamp } from '../core/math.js';
 import { Rng, frand } from '../core/rng.js';
 import { Particles, P } from '../gfx/particles.js';
@@ -107,7 +107,7 @@ export class World {
       this.pod.y = p.y;
       this.podColorKept = c.pod.color;
     }
-    if (this.shieldsOn) p.shield = c.shield;
+    if (this.shieldsOn) p.shield = Math.min(SHIELD_MAX, c.shield);
   }
 
   // ------------------------------------------------------------------ setup / restart
@@ -288,12 +288,17 @@ export class World {
         this.popText(p.x, p.y - 16, 'BIT', '#d0a8ff', 60);
         break;
       case ITEM.SHIELD:
-        if (this.shieldsOn) {
-          p.shield++; // no upper limit
+        if (this.shieldsOn && p.shield < SHIELD_MAX) {
+          p.shield++;
           p.shieldFlash = 40;
           this.sfx('shieldUp');
-          this.popText(p.x, p.y - 16, `SHIELD ${p.shield}`, '#7ff4ff', 70);
+          this.popText(p.x, p.y - 16, p.shield >= SHIELD_MAX ? 'SHIELD MAX' : `SHIELD ${p.shield}`, '#7ff4ff', 70);
           this.fx.ring(p.x, p.y, 30, '#7ff4ff', 20);
+        } else if (this.shieldsOn) {
+          // already full: the capsule turns into points
+          this.addScore(5000, p.x, p.y);
+          this.sfx('powerup');
+          this.popText(p.x, p.y - 16, 'SHIELD MAX', '#bff8ff', 60);
         } else {
           this.addScore(5000, p.x, p.y);
           this.sfx('powerup');

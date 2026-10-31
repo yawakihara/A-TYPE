@@ -187,8 +187,8 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }
-// shield: 3 per life, each hit (bullet, enemy, terrain) costs one, a hit at 0 is a miss, capsules add
-// one without limit, the loadout and shield carry into the next stage, OPTIONS can switch it off
+// shield: every life starts with none, capsules charge it up to 3, each hit (bullet, enemy, terrain)
+// costs one, a hit at 0 is a miss, the loadout and shield carry into the next stage, OPTIONS can switch it off
 {
   const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
   const errors = [];
@@ -204,9 +204,9 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
     const ready = () => { w.bullets.clear(); w.enemies.length = 0; w.hitstop = 0; w.slowmo = 0; p.invuln = 0; p.shieldT = 0; };
     const shoot = () => { ready(); w.bullets.spawn(p.x, p.y, 0, 0, 'orb'); step(1); };
     step(60);
-    ready();
-    p.shield = 3;
     out.push(`start:${p.shield}`);
+    for (let i = 0; i < 4; i++) w.collect({ type: 'shield' });
+    out.push(`capsules:${p.shield}`);
     shoot();
     out.push(`bullet:${p.shield}/${p.alive}`);
     ready();
@@ -222,8 +222,8 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
     for (let i = 0; i < 400 && w.phase !== 'play'; i++) step(1);
     out.push(`respawn:${w.player.shield}`);
     p = w.player;
-    for (let i = 0; i < 5; i++) w.collect({ type: 'shield' });
-    out.push(`capsules:${p.shield}`);
+    for (let i = 0; i < 2; i++) w.collect({ type: 'shield' });
+    out.push(`recharge:${p.shield}`);
     w.collect({ type: 'crystal', color: 'red' });
     for (let i = 0; i < 400 && !(w.pod && w.pod.attached); i++) step(1);
     g.scene.session.carry = w.captureCarry();
@@ -241,11 +241,11 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
     g.cfg.shield = true;
     return out;
   });
-  const expect = ['start:3', 'bullet:2/true', 'enemy:1/true', 'terrain:0/true/clear', 'fatal:false', 'respawn:3', 'capsules:8', 'next-stage:8/front', 'off:0', 'off-hit:false'];
+  const expect = ['start:0', 'capsules:3', 'bullet:2/true', 'enemy:1/true', 'terrain:0/true/clear', 'fatal:false', 'respawn:0', 'recharge:2', 'next-stage:2/front', 'off:0', 'off-hit:false'];
   const problems = [...errors];
   for (const e of expect) if (!r.includes(e)) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
   if (problems.length) failed++;
-  console.log(`${problems.length ? 'FAIL' : 'PASS'}  shield: hits, miss at 0, capsules without limit, carry-over, OFF  ${JSON.stringify(r)}`);
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  shield: starts at 0, max 3, hits, miss at 0, carry-over, OFF  ${JSON.stringify(r)}`);
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }

@@ -43,8 +43,9 @@ export const DIFFICULTIES = [
   },
 ];
 
-/** Shield: hits each life can absorb before one is fatal; capsules add one more, without limit. */
-export const SHIELD_START = 3;
+/** Shield: each life starts with none; every capsule adds one, up to SHIELD_MAX. */
+export const SHIELD_START = 0;
+export const SHIELD_MAX = 3;
 /** Invulnerability after the shield absorbs a hit (frames). */
 export const SHIELD_IFRAMES = 120;
 

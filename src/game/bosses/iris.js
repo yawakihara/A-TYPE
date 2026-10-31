@@ -240,7 +240,7 @@ class IrisWarden extends Boss {
     const along = px * dx + py * dy;
     if (along > 0) {
       const perp = Math.abs(px * dy - py * dx);
-      if (perp < 6 && p.alive && p.invuln <= 0) w.hitPlayer('laser');
+      if (perp < 6 && p.alive && p.invuln <= 0) w.killPlayer('laser');
     }
     // impact sparks where the beam hits terrain
     const T = w.terrain;

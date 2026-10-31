@@ -67,11 +67,6 @@ export function stage6() {
   // ---------------------------------------------------------------- the mother
   at(4980, (w) => w.startBoss('mother', { title: 'BLOOM MOTHER — THE HEART OF THE BLOOM', music: 'finalboss', warn: 230 }));
 
-  // ---------------------------------------------------------------- shield capsules
-  at(700, (w) => w.spawnR('carrier', 20, 113, { fly: true, drop: ITEM.SHIELD }));
-  at(2300, (w) => w.spawnR('carrier', 20, 111, { fly: true, drop: ITEM.SHIELD }));
-  at(4600, (w) => w.spawnR('carrier', 20, 110, { fly: true, drop: ITEM.SHIELD }));
-
   return {
     index: 5,
     name: { en: 'THE HEART', ja: '心臓' },

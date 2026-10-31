@@ -1,8 +1,8 @@
 /**
  * Bottom HUD strip in the classic single-row arcade layout:
- * lives · speed gear · pod laser · missiles · shield · BEAM meter · 1P score · HI score.
+ * lives · speed gear · pod laser · BEAM meter · 1P score · HI score.
  */
-import { W, H, PH, CHARGE_FULL, CHARGE_MIN, SHIELD_MAX } from '../config.js';
+import { W, H, PH, CHARGE_FULL, CHARGE_MIN } from '../config.js';
 import { text } from '../gfx/font.js';
 import { formatScore } from '../core/math.js';
 
@@ -51,34 +51,9 @@ export function drawHUD(r, w, hi) {
     T(String(w.pod.level), 78, c);
   }
   if (p.missiles) T(`M${p.missiles}`, 86, '#ffb070');
-  // shield: three hexagon slots, lit for each charge
-  if (w.shieldsOn) {
-    const hy = y0 + 8;
-    if (p.shieldFlash > 0 && !r.arcade) r.glow(102.5, hy, 12, p.shield > 0 ? '#7ff4ff' : '#ff6a7e', (p.shieldFlash / 40) * 0.8);
-    for (let k = 0; k < SHIELD_MAX; k++) {
-      const hx = 95.5 + k * 7;
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
-        const x = hx + Math.cos(a) * 3.3;
-        const y = hy + Math.sin(a) * 3.3;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      if (k < p.shield) {
-        ctx.fillStyle = '#5ff0ff';
-        ctx.fill();
-      } else {
-        ctx.strokeStyle = '#4a7c8e';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-  }
   // BEAM meter
-  const bx = 146;
-  const bw = 78;
+  const bx = 124;
+  const bw = 96;
   const by = y0 + 5;
   T('BEAM', bx - 4, '#9fb4d8', 'right');
   ctx.fillStyle = '#04070d';

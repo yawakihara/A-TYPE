@@ -119,25 +119,14 @@ defineSprite('eb_needle', {
 });
 
 /** Item capsule shell (letter drawn on top at runtime). frames: 0 red,1 blue,2 yellow,3 speed,4 missile,5 bit,6 bonus */
-const ITEM_COL = ['#ff3d5a', '#3d9bff', '#ffcc2e', '#45e08a', '#ff8a3d', '#c08aff', '#ffffff', '#5ff0ff'];
+const ITEM_COL = ['#ff3d5a', '#3d9bff', '#ffcc2e', '#45e08a', '#ff8a3d', '#c08aff', '#ffffff'];
 defineSprite('item', {
   w: 16,
   h: 16,
-  frames: 8,
+  frames: 7,
   outline: true,
   draw(ctx, f, info) {
     const c = ITEM_COL[f];
-    if (f === 7) {
-      // shield capsule: a hexagonal energy badge with a smaller hex at its heart
-      const hex = (r) => [0, 1, 2, 3, 4, 5].map((i) => [Math.cos((i / 6) * Math.PI * 2 - Math.PI / 2) * r, Math.sin((i / 6) * Math.PI * 2 - Math.PI / 2) * r]);
-      solid(ctx, hex(7.2), lin(ctx, 0, -7, 0, 7, [[0, '#f2fdff'], [0.45, '#8ab8c8'], [1, '#26323e']]), { line: '#0a0c14', lw: 0.6 });
-      solid(ctx, hex(5.4), lin(ctx, -4, -5, 4, 5, [[0, '#d8ffff'], [0.4, c], [1, '#0e4a5a']]));
-      solid(ctx, hex(2.4), 'rgba(255,255,255,0.85)');
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillRect(-3.6, -4.2, 7.2, 1.2);
-      emissive(ctx, info, 0, 0, 7, c, 0.5);
-      return;
-    }
     if (f <= 2) {
       // energy crystal: faceted gem
       const pts = [[0, -7], [5.5, -2.5], [4, 5], [0, 7], [-4, 5], [-5.5, -2.5]];

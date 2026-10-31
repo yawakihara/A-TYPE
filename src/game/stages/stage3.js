@@ -81,6 +81,11 @@ export function stage3() {
   at(4200, mites(112, 1, 'dive', 6));
   at(4310, (w) => w.startBoss('leviathan', { title: 'LEVIATHAN CORE', music: 'boss' }));
 
+  // ---------------------------------------------------------------- shield capsules
+  at(700, (w) => w.spawnR('carrier', 20, 80, { fly: true, drop: ITEM.SHIELD }));
+  at(1950, (w) => w.spawnR('carrier', 20, 88, { fly: true, drop: ITEM.SHIELD }));
+  at(3900, (w) => w.spawnR('carrier', 20, 104, { fly: true, drop: ITEM.SHIELD }));
+
   return {
     index: 2,
     name: { en: 'IRON LEVIATHAN', ja: '鉄の巨鯨' },

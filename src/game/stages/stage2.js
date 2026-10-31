@@ -72,6 +72,11 @@ export function stage2() {
   // ---------------------------------------------------------------- boss
   at(5660, (w) => w.startBoss('brood', { title: 'BROODMOTHER', music: 'boss' }));
 
+  // ---------------------------------------------------------------- shield capsules
+  at(900, (w) => w.spawnR('carrier', 20, 120, { fly: true, drop: ITEM.SHIELD }));
+  at(2500, (w) => w.spawnR('carrier', 20, 111, { fly: true, drop: ITEM.SHIELD }));
+  at(5000, (w) => w.spawnR('carrier', 20, 116, { fly: true, drop: ITEM.SHIELD }));
+
   return {
     index: 1,
     name: { en: 'VERDANT ABYSS', ja: '翠の深淵' },

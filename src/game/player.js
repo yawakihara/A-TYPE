@@ -1,9 +1,10 @@
 /**
  * The player's fighter, A-01 HALCYON.
  * Rules follow the genre's arcade classic: tap to fire, hold to charge the BEAM meter and
- * release to loose a piercing lance; one touch of terrain or a bullet is fatal.
+ * release to loose a piercing lance. A shield (3 per life, topped up by shield capsules without
+ * limit) absorbs hits; with no shield left, one touch of terrain or a bullet is fatal.
  */
-import { W, PH, SHIP_SPEEDS, CHARGE_FULL, CHARGE_MIN } from '../config.js';
+import { W, PH, SHIP_SPEEDS, CHARGE_FULL, CHARGE_MIN, SHIELD_START } from '../config.js';
 import { clamp, approach } from '../core/math.js';
 import { frand } from '../core/rng.js';
 import { Shot, Beam, Missile } from './weapons.js';
@@ -25,6 +26,9 @@ export class Player {
     this.rapidCool = 0;
     this.missileCool = 0;
     this.invuln = 0;
+    this.shield = SHIELD_START;
+    this.shieldT = 0; // invulnerability after the shield took a hit
+    this.shieldFlash = 0; // bubble flash (hit or capsule)
     this.tilt = 0;
     this.flame = 0;
     this.control = true;
@@ -59,6 +63,9 @@ export class Player {
     this.charge = 0;
     this.chargeHeld = 0;
     this.invuln = 150;
+    this.shield = this.w.shieldsOn ? SHIELD_START : 0;
+    this.shieldT = 0;
+    this.shieldFlash = 0;
     this.control = true;
     this.autoX = null;
   }
@@ -67,6 +74,8 @@ export class Player {
     const w = this.w;
     if (!this.alive) return;
     if (this.invuln > 0) this.invuln--;
+    if (this.shieldT > 0) this.shieldT--;
+    if (this.shieldFlash > 0) this.shieldFlash--;
     let mx = 0;
     let my = 0;
     if (this.autoX !== null) {
@@ -95,9 +104,19 @@ export class Player {
     this.tilt = approach(this.tilt, my, 0.12);
     this.flame++;
     // terrain kills on contact (generous-but-honest body box)
-    if (!w.god && this.invulnTerrain() && w.terrain.hitBox(this.x - 1, this.y + 0.5, 11, 3.6)) {
-      w.killPlayer('terrain');
-      return;
+    if (!w.god && this.invulnTerrain() && this.shieldT <= 0 && w.terrain.hitBox(this.x - 1, this.y + 0.5, 11, 3.6)) {
+      w.hitPlayer('terrain');
+      if (!this.alive) return;
+    }
+    // while the shield's afterglow protects the ship, terrain pushes it back instead of letting it sink in
+    if (this.shieldT > 0 && !w.god) {
+      const T = w.terrain;
+      const inside = () => T.hitBox(this.x - 1, this.y + 0.5, 11, 3.6);
+      if (inside()) {
+        this.y -= this.vy;
+        if (inside()) this.x -= this.vx;
+        if (inside()) w.pushOut(this);
+      }
     }
     if (!this.control || this.autoX !== null) {
       this.charge = 0;
@@ -204,9 +223,36 @@ export class Player {
     w.fx.glow(this.x + 16, this.y, 10 + level * 4, '#7ff4ff', 10);
   }
 
+  /** Shield bubble: flashes when the shield takes a hit or a capsule is collected. */
+  drawShield(r) {
+    const k = Math.max(this.shieldFlash / 40, this.shieldT > 0 ? 0.22 + 0.12 * Math.sin(this.shieldT * 0.4) : 0);
+    if (k <= 0) return;
+    const ctx = r.ctx;
+    const col = this.shield > 0 ? '#7ff4ff' : '#ff6a7e';
+    r.glow(this.x, this.y, 20, col, 0.35 * k);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(1, k * 1.4);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = r.arcade ? 1 : 1.1;
+    ctx.beginPath();
+    const rot = this.w.t * 0.03;
+    for (let i = 0; i <= 6; i++) {
+      const a = rot + (i / 6) * Math.PI * 2;
+      const x = this.x + 1 + Math.cos(a) * 19;
+      const y = this.y + Math.sin(a) * 12;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   draw(r) {
     if (!this.alive || !this.visible) return;
+    this.drawShield(r);
     if (this.invuln > 0 && this.invuln % 6 < 3 && this.autoX === null) return;
+    if (this.shieldT > 0 && this.shieldT % 8 < 3) return;
     const t = this.tilt;
     const frame = t < -0.7 ? 2 : t < -0.25 ? 1 : t > 0.7 ? 4 : t > 0.25 ? 3 : 0;
     const fl = (this.flame >> 1) % 4;

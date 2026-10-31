@@ -1,6 +1,6 @@
 /**
  * Bottom HUD strip in the classic single-row arcade layout:
- * lives · speed gear · pod laser · BEAM meter · 1P score · HI score.
+ * lives · speed gear · pod laser · missiles · shield · BEAM meter · 1P score · HI score.
  */
 import { W, H, PH, CHARGE_FULL, CHARGE_MIN } from '../config.js';
 import { text } from '../gfx/font.js';
@@ -51,9 +51,34 @@ export function drawHUD(r, w, hi) {
     T(String(w.pod.level), 78, c);
   }
   if (p.missiles) T(`M${p.missiles}`, 86, '#ffb070');
+  // shield: hexagon badge and count (no upper limit)
+  if (w.shieldsOn) {
+    const hx = 101;
+    const hy = y0 + 8;
+    const on = p.shield > 0;
+    if (p.shieldFlash > 0 && !r.arcade) r.glow(hx, hy, 9, on ? '#7ff4ff' : '#ff6a7e', (p.shieldFlash / 40) * 0.9);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const x = hx + Math.cos(a) * 3.8;
+      const y = hy + Math.sin(a) * 3.8;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    if (on) {
+      ctx.fillStyle = '#5ff0ff';
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = '#ff6a7e';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    T(String(p.shield), 106.5, on ? '#bff8ff' : '#ff6a7e');
+  }
   // BEAM meter
-  const bx = 124;
-  const bw = 96;
+  const bx = 146;
+  const bw = 78;
   const by = y0 + 5;
   T('BEAM', bx - 4, '#9fb4d8', 'right');
   ctx.fillStyle = '#04070d';

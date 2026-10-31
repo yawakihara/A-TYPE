@@ -18,6 +18,7 @@ const DEFAULT_CFG = {
   diff: 1,
   reduceFx: false,
   shake: true,
+  shield: true,
 };
 
 export class Game {

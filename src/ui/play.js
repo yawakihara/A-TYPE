@@ -75,6 +75,7 @@ export class PlayScene {
       this.contCount = 10;
       this.game.music('gameover', 0, false);
     } else if (res === 'clear') {
+      s.carry = w.captureCarry();
       this.mode = 'tally';
       this.tallyT = 0;
       const stageNo = this.stageIdx + 1;

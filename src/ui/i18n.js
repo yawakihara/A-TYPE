@@ -97,15 +97,15 @@ export const HOWTO = [
   {
     title: { en: 'CRYSTALS & ITEMS', ja: 'クリスタルとアイテム' },
     lines: {
-      en: ['Crystals cycle RED → BLUE → YELLOW; the colour sets the laser.', 'RED HELIX: piercing spiral beams ahead.', 'BLUE PRISM: diagonal beams that ricochet.', 'YELLOW CRAWLER: shots that crawl along walls.', 'More crystals grow AEGIS to level 3.', 'S: speed  M: missiles  B: bit  Hexagon: +1 shield'],
-      ja: ['クリスタルは 赤→青→黄 と色が変わる。取った色でレーザーが決まる。', '赤 HELIX:前方へ螺旋状の貫通レーザー。', '青 PRISM:斜めに撃ち、壁で反射するレーザー。', '黄 CRAWLER:床や天井を這って進むレーザー。', '重ねて取るとLv3まで成長。 S:スピード  M:追尾ミサイル  B:ビット', '六角形のカプセル:シールド+1(上限なし)。'],
+      en: ['Crystals cycle RED → BLUE → YELLOW; the colour sets the laser.', 'RED HELIX: piercing spiral beams ahead.', 'BLUE PRISM: diagonal beams that ricochet.', 'YELLOW CRAWLER: shots that crawl along walls.', 'More crystals grow AEGIS to level 3.', 'S: speed  M: missiles  B: bit', 'Hexagon capsule: +1 shield (max 3).'],
+      ja: ['クリスタルは 赤→青→黄 と色が変わる。取った色でレーザーが決まる。', '赤 HELIX:前方へ螺旋状の貫通レーザー。', '青 PRISM:斜めに撃ち、壁で反射するレーザー。', '黄 CRAWLER:床や天井を這って進むレーザー。', '重ねて取るとLv3まで成長。 S:スピード  M:追尾ミサイル  B:ビット', '六角形のカプセル:シールド+1(最大3)。'],
     },
   },
   {
     title: { en: 'RULES', ja: 'ルール' },
     lines: {
-      en: ['A shield absorbs hits: 3 per life.', 'Shield capsules add one each, with no limit.', 'With no shield left, one hit is fatal (OPTIONS can switch shields off).', 'A miss restarts you at the last checkpoint without power-ups.', 'Extra fighter at 50,000, 150,000, then every 150,000.'],
-      ja: ['シールドが被弾を肩代わりする。1機につき3から始まる。', 'シールドカプセルを取るたびに1つ増える(上限なし)。', 'シールドが0の時に被弾するとミス(オプションでOFFにすると一撃死)。', 'ミスすると直前のチェックポイントから、装備を失って再開。', '50,000点・150,000点、以降150,000点ごとに1機増える。'],
+      en: ['Shield capsules charge a shield, up to 3.', 'One charge absorbs one hit; you start with none.', 'With no shield left, one hit is fatal (OPTIONS can switch shields off).', 'A miss restarts you at the last checkpoint without power-ups.', 'Extra fighter at 50,000, 150,000, then every 150,000.'],
+      ja: ['シールドカプセルを取るとシールドが1つたまる(最大3)。', '1つにつき被弾1回を肩代わりする。各機体は0から始まる。', 'シールドが0の時に被弾するとミス(オプションでOFFにすると一撃死)。', 'ミスすると直前のチェックポイントから、装備を失って再開。', '50,000点・150,000点、以降150,000点ごとに1機増える。'],
     },
   },
 ];

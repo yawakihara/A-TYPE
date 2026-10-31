@@ -1,8 +1,8 @@
 /**
  * The player's fighter, A-01 HALCYON.
  * Rules follow the genre's arcade classic: tap to fire, hold to charge the BEAM meter and
- * release to loose a piercing lance. A shield (3 per life, topped up by shield capsules without
- * limit) absorbs hits; with no shield left, one touch of terrain or a bullet is fatal.
+ * release to loose a piercing lance. Shield capsules charge a shield (up to 3) that absorbs hits;
+ * with no shield left, one touch of terrain or a bullet is fatal.
  */
 import { W, PH, SHIP_SPEEDS, CHARGE_FULL, CHARGE_MIN, SHIELD_START } from '../config.js';
 import { clamp, approach } from '../core/math.js';

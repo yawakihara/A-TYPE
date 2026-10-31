@@ -67,6 +67,8 @@ export function makeBot(getWorld) {
         prefY = pd.y + (p.y <= pd.y ? -24 : 24);
       }
     }
+    // a pod docked on the nose soaks up ordinary bullets coming at the ship from ahead
+    const podFront = pd && pd.state === 'front' ? pd : null;
     let bestMove = [0, 0];
     let bestScore = -Infinity;
     for (let dx = -1; dx <= 1; dx++) {
@@ -82,6 +84,7 @@ export function makeBot(getWorld) {
             if (b.dead) continue;
             const bx = b.x + (b.vx + w.dx) * k;
             const by = b.y + b.vy * k;
+            if (podFront && b.absorb && bx > px + 6 && Math.abs(by - py) < podFront.r + 5) continue;
             const d2 = (bx - px) ** 2 + (by - py) ** 2;
             const r = b.r + 7;
             if (d2 < r * r) danger += 400 / k;

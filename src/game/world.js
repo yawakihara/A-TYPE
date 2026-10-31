@@ -2,7 +2,7 @@
  * One stage of play: camera/scroll, timeline events, checkpoints, entities, collisions,
  * death/respawn rules, items and scoring, boss and stage-clear flow.
  */
-import { W, PH, DIFFICULTIES, EXTENDS, EXTEND_EVERY, SHIELD_IFRAMES, SHIELD_MAX } from '../config.js';
+import { W, PH, DIFFICULTIES, EXTENDS, EXTEND_EVERY } from '../config.js';
 import { boxHit, circleBox, clamp } from '../core/math.js';
 import { Rng, frand } from '../core/rng.js';
 import { Particles, P } from '../gfx/particles.js';
@@ -31,9 +31,6 @@ export class World {
     this.diff = DIFFICULTIES[session.diff];
     this.bulletMul = this.diff.bullet * (1 + session.loop * 0.15);
     this.god = !!opt.god;
-    // shield system (OPTIONS can switch it off for the classic one-hit rules)
-    this.shieldsOn = game.cfg.shield !== false;
-    this.bossShieldDrop = false;
     this.rng = new Rng(1234 + stage.index * 77);
     this.terrain = new Terrain(stage.terrain);
     this.bg = makeBackground(stage.bg, this);
@@ -73,7 +70,7 @@ export class World {
     this.timers = [];
     this.onDone = null; // (result) => void : 'clear' | 'gameover'
     this.startFrom(opt.checkpoint ?? 0, true);
-    // power-ups and shield carried over from the previous stage, as in the arcade original
+    // power-ups carried over from the previous stage, as in the arcade original
     if (session.carry) {
       this.applyCarry(session.carry);
       session.carry = null;
@@ -89,7 +86,6 @@ export class World {
       maxGear: p.maxGear,
       missiles: p.missiles,
       bits: this.bits.length,
-      shield: p.shield,
     };
   }
 
@@ -107,7 +103,6 @@ export class World {
       this.pod.y = p.y;
       this.podColorKept = c.pod.color;
     }
-    if (this.shieldsOn) p.shield = Math.min(SHIELD_MAX, c.shield);
   }
 
   // ------------------------------------------------------------------ setup / restart
@@ -127,7 +122,6 @@ export class World {
     this.timers.length = 0;
     this.boss = null;
     this.bossState = 'none';
-    this.bossShieldDrop = false;
     this.warnT = 0;
     this.scroll = this.scrollAt(cx);
     this.scrollTarget = this.scroll;
@@ -287,23 +281,6 @@ export class World {
         this.sfx('powerup');
         this.popText(p.x, p.y - 16, 'BIT', '#d0a8ff', 60);
         break;
-      case ITEM.SHIELD:
-        if (this.shieldsOn && p.shield < SHIELD_MAX) {
-          p.shield++;
-          p.shieldFlash = 40;
-          this.sfx('shieldUp');
-          this.popText(p.x, p.y - 16, p.shield >= SHIELD_MAX ? 'SHIELD MAX' : `SHIELD ${p.shield}`, '#7ff4ff', 70);
-          this.fx.ring(p.x, p.y, 30, '#7ff4ff', 20);
-        } else if (this.shieldsOn) {
-          // already full: the capsule turns into points
-          this.addScore(5000, p.x, p.y);
-          this.sfx('powerup');
-          this.popText(p.x, p.y - 16, 'SHIELD MAX', '#bff8ff', 60);
-        } else {
-          this.addScore(5000, p.x, p.y);
-          this.sfx('powerup');
-        }
-        break;
       default:
         this.addScore(4500, p.x, p.y);
         this.sfx('powerup');
@@ -349,56 +326,6 @@ export class World {
   }
 
   // ------------------------------------------------------------------ player death / respawn
-
-  /** Any hit on the ship: the shield takes it while one is left, otherwise the ship is lost. */
-  hitPlayer(cause) {
-    const p = this.player;
-    if (!p.alive || this.god || this.phase !== 'play' || p.shieldT > 0) return;
-    if (!this.shieldsOn || p.shield <= 0) {
-      this.killPlayer(cause);
-      return;
-    }
-    p.shield--;
-    p.shieldT = SHIELD_IFRAMES;
-    p.shieldFlash = 40;
-    this.stats.shieldHits = (this.stats.shieldHits || 0) + 1;
-    // breathing room: bullets right around the ship burst harmlessly
-    for (const b of this.bullets.list) {
-      if (b.dead) continue;
-      if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < 46 * 46) {
-        b.dead = true;
-        this.fx.glow(b.x, b.y, 8, '#7ff4ff', 10);
-      }
-    }
-    if (cause === 'terrain') this.pushOut(p);
-    this.fx.ring(p.x, p.y, 26, p.shield > 0 ? '#7ff4ff' : '#ff6a7e', 18);
-    this.fx.sparks(p.x, p.y, 18, '#bff8ff', 3.5, 22);
-    this.r.shake(0.35);
-    this.r.doFlash(0.22, [0.55, 0.9, 1]);
-    this.r.aberration(1.2);
-    this.r.wave(p.x - this.camX, p.y, 0.5, 1.4);
-    this.rumble(0.7, 0.6, 220);
-    this.hitstop = 4;
-    this.sfx('shieldHit');
-    const ja = this.game.lang === 'ja';
-    this.popText(p.x, p.y - 18, p.shield > 0 ? `SHIELD ${p.shield}` : ja ? 'シールド 0' : 'SHIELD DOWN', p.shield > 0 ? '#7ff4ff' : '#ff6a7e', 70);
-  }
-
-  /** After a shield-absorbed scrape, move the ship to the nearest clear height so it can fly on. */
-  pushOut(p) {
-    const T = this.terrain;
-    const clear = (y) => y > 8 && y < PH - 7 && !T.hitBox(p.x - 1, y + 0.5, 12, 4.6);
-    for (let d = 0; d < PH; d += 2) {
-      if (clear(p.y - d)) {
-        p.y -= d;
-        return;
-      }
-      if (clear(p.y + d)) {
-        p.y += d;
-        return;
-      }
-    }
-  }
 
   killPlayer(cause) {
     const p = this.player;
@@ -522,13 +449,6 @@ export class World {
     if (this.msg && ++this.msg.t > this.msg.life) this.msg = null;
     this.bg.update?.(this);
     this.updateBoss();
-    // once per boss fight, when the boss is half beaten, a shield capsule is brought in from behind
-    const bs = this.boss;
-    if (this.shieldsOn && bs && !bs.dead && !bs.dying && !this.bossShieldDrop && bs.hp < bs.maxHp * 0.5) {
-      this.bossShieldDrop = true;
-      const py = this.player.y;
-      this.spawn('carrier', this.camX - 16, clamp(py < PH / 2 ? py + 44 : py - 44, 40, PH - 40), { fly: true, drop: ITEM.SHIELD, walk: -1.25 });
-    }
     this.updatePhase();
   }
 
@@ -717,7 +637,7 @@ export class World {
         }
       }
     }
-    if (!p.alive || this.god || p.invuln > 0 || p.shieldT > 0 || this.phase !== 'play') return;
+    if (!p.alive || this.god || p.invuln > 0 || this.phase !== 'play') return;
     // bullets vs player core
     for (const b of this.bullets.list) {
       if (b.dead) continue;
@@ -725,12 +645,12 @@ export class World {
         const a = Math.atan2(b.vy, b.vx);
         for (let k = 0; k <= b.len; k += 3) {
           if (circleBox(b.x - Math.cos(a) * k, b.y - Math.sin(a) * k, b.r, p.x, p.y, p.coreHW, p.coreHH)) {
-            this.hitPlayer('bullet');
+            this.killPlayer('bullet');
             return;
           }
         }
       } else if (circleBox(b.x, b.y, b.r * 0.8, p.x, p.y, p.coreHW, p.coreHH)) {
-        this.hitPlayer('bullet');
+        this.killPlayer('bullet');
         return;
       }
     }
@@ -741,7 +661,7 @@ export class World {
         if (b.part && b.part.dead) continue;
         if (b.touch === false) continue;
         if (boxHit(p.x, p.y, 8, 3.2, b.x, b.y, b.hw * 0.85, b.hh * 0.85)) {
-          this.hitPlayer('enemy');
+          this.killPlayer('enemy');
           return;
         }
       }

@@ -31,8 +31,6 @@ export const STR = {
   sfxVol: { en: 'SFX VOLUME', ja: '効果音音量' },
   language: { en: 'LANGUAGE', ja: '言語' },
   shake: { en: 'SCREEN EFFECTS', ja: '画面エフェクト' },
-  shieldOpt: { en: 'SHIELD', ja: 'シールド' },
-  shieldOff: { en: 'OFF (ONE HIT)', ja: 'OFF(一撃死)' },
   fullscreen: { en: 'FULLSCREEN', ja: 'フルスクリーン' },
   resetRecords: { en: 'RESET RECORDS', ja: '記録をリセット' },
   on: { en: 'ON', ja: 'ON' },
@@ -97,15 +95,15 @@ export const HOWTO = [
   {
     title: { en: 'CRYSTALS & ITEMS', ja: 'クリスタルとアイテム' },
     lines: {
-      en: ['Crystals cycle RED → BLUE → YELLOW; the colour sets the laser.', 'RED HELIX: piercing spiral beams ahead.', 'BLUE PRISM: diagonal beams that ricochet.', 'YELLOW CRAWLER: shots that crawl along walls.', 'More crystals grow AEGIS to level 3.', 'S: speed  M: missiles  B: bit', 'Hexagon capsule: +1 shield (max 3).'],
-      ja: ['クリスタルは 赤→青→黄 と色が変わる。取った色でレーザーが決まる。', '赤 HELIX:前方へ螺旋状の貫通レーザー。', '青 PRISM:斜めに撃ち、壁で反射するレーザー。', '黄 CRAWLER:床や天井を這って進むレーザー。', '重ねて取るとLv3まで成長。 S:スピード  M:追尾ミサイル  B:ビット', '六角形のカプセル:シールド+1(最大3)。'],
+      en: ['Crystals cycle RED → BLUE → YELLOW; the colour sets the laser.', 'RED HELIX: piercing spiral beams ahead.', 'BLUE PRISM: diagonal beams that ricochet.', 'YELLOW CRAWLER: shots that crawl along walls.', 'More crystals grow AEGIS to level 3.', 'S: speed  M: missiles  B: bit'],
+      ja: ['クリスタルは 赤→青→黄 と色が変わる。取った色でレーザーが決まる。', '赤 HELIX:前方へ螺旋状の貫通レーザー。', '青 PRISM:斜めに撃ち、壁で反射するレーザー。', '黄 CRAWLER:床や天井を這って進むレーザー。', '重ねて取るとLv3まで成長。 S:スピード  M:追尾ミサイル  B:ビット'],
     },
   },
   {
     title: { en: 'RULES', ja: 'ルール' },
     lines: {
-      en: ['Shield capsules charge a shield, up to 3.', 'One charge absorbs one hit; you start with none.', 'With no shield left, one hit is fatal (OPTIONS can switch shields off).', 'A miss restarts you at the last checkpoint without power-ups.', 'Extra fighter at 50,000, 150,000, then every 150,000.'],
-      ja: ['シールドカプセルを取るとシールドが1つたまる(最大3)。', '1つにつき被弾1回を肩代わりする。各機体は0から始まる。', 'シールドが0の時に被弾するとミス(オプションでOFFにすると一撃死)。', 'ミスすると直前のチェックポイントから、装備を失って再開。', '50,000点・150,000点、以降150,000点ごとに1機増える。'],
+      en: ['One hit is fatal — bullets, enemies, and walls alike.', 'After a miss you restart from the last checkpoint without your power-ups.', 'The A-01 is small: only the cockpit core is vulnerable to bullets, but its whole hull scrapes terrain.', 'Extra fighter at 50,000 and 150,000, then every 150,000 points.', 'Six stages. Pierce the Bloom.'],
+      ja: ['被弾・敵との接触・地形への衝突は即ミス。', 'ミスすると直前のチェックポイントから、装備を失って再開。', '弾の当たり判定はコクピット付近のみ。地形には機体全体が当たる。', '50,000点・150,000点、以降150,000点ごとに1機増える。', '全6ステージ。ブルームを貫け。'],
     },
   },
 ];

@@ -187,8 +187,7 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }
-// shield: every life starts with none, capsules charge it up to 3, each hit (bullet, enemy, terrain)
-// costs one, a hit at 0 is a miss, the loadout and shield carry into the next stage, OPTIONS can switch it off
+// classic rules: one hit is fatal, and the loadout carries into the next stage
 {
   const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
   const errors = [];
@@ -201,51 +200,31 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
     const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(); };
     let w = g.scene.world;
     let p = w.player;
-    const ready = () => { w.bullets.clear(); w.enemies.length = 0; w.hitstop = 0; w.slowmo = 0; p.invuln = 0; p.shieldT = 0; };
-    const shoot = () => { ready(); w.bullets.spawn(p.x, p.y, 0, 0, 'orb'); step(1); };
     step(60);
-    out.push(`start:${p.shield}`);
-    for (let i = 0; i < 4; i++) w.collect({ type: 'shield' });
-    out.push(`capsules:${p.shield}`);
-    shoot();
-    out.push(`bullet:${p.shield}/${p.alive}`);
-    ready();
-    w.spawn('wisp', p.x + 2, p.y, {});
-    step(2);
-    out.push(`enemy:${p.shield}/${p.alive}`);
-    ready();
-    p.y = w.terrain.floorAt(p.x) - 1;
-    step(1);
-    out.push(`terrain:${p.shield}/${p.alive}/${w.terrain.hitBox(p.x - 1, p.y + 0.5, 11, 3.6) ? 'stuck' : 'clear'}`);
-    shoot();
-    out.push(`fatal:${p.alive}`);
-    for (let i = 0; i < 400 && w.phase !== 'play'; i++) step(1);
-    out.push(`respawn:${w.player.shield}`);
-    p = w.player;
-    for (let i = 0; i < 2; i++) w.collect({ type: 'shield' });
-    out.push(`recharge:${p.shield}`);
-    w.collect({ type: 'crystal', color: 'red' });
+    w.collect({ type: 'speed' });
+    w.collect({ type: 'missile' });
+    w.collect({ type: 'crystal', color: 'yellow' });
     for (let i = 0; i < 400 && !(w.pod && w.pod.attached); i++) step(1);
+    w.collect({ type: 'crystal', color: 'yellow' });
     g.scene.session.carry = w.captureCarry();
     g.scene.startStage(1);
     w = g.scene.world;
-    out.push(`next-stage:${w.player.shield}/${w.pod && w.pod.state}`);
-    g.cfg.shield = false;
-    g.scene.startStage(0, 1);
-    w = g.scene.world;
     p = w.player;
-    step(60);
-    out.push(`off:${p.shield}`);
-    shoot();
-    out.push(`off-hit:${p.alive}`);
-    g.cfg.shield = true;
+    out.push(`carry:${w.pod && w.pod.state}/${w.pod && w.pod.color}${w.pod && w.pod.level}/gear${p.maxGear}/m${p.missiles}`);
+    step(200);
+    w.bullets.clear();
+    w.enemies.length = 0;
+    p.invuln = 0;
+    w.bullets.spawn(p.x, p.y, 0, 0, 'orb');
+    step(1);
+    out.push(`one-hit:${p.alive}`);
     return out;
   });
-  const expect = ['start:0', 'capsules:3', 'bullet:2/true', 'enemy:1/true', 'terrain:0/true/clear', 'fatal:false', 'respawn:0', 'recharge:2', 'next-stage:2/front', 'off:0', 'off-hit:false'];
+  const expect = ['carry:front/yellow2/gear1/m1', 'one-hit:false'];
   const problems = [...errors];
   for (const e of expect) if (!r.includes(e)) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
   if (problems.length) failed++;
-  console.log(`${problems.length ? 'FAIL' : 'PASS'}  shield: starts at 0, max 3, hits, miss at 0, carry-over, OFF  ${JSON.stringify(r)}`);
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  rules: loadout carries to the next stage, one hit is fatal  ${JSON.stringify(r)}`);
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }

@@ -11,11 +11,10 @@ export const ITEM = {
   MISSILE: 'missile',
   BIT: 'bit',
   BONUS: 'bonus',
-  SHIELD: 'shield',
 };
 
 const CYCLE = ['red', 'blue', 'yellow'];
-const FRAME = { red: 0, blue: 1, yellow: 2, speed: 3, missile: 4, bit: 5, bonus: 6, shield: 7 };
+const FRAME = { red: 0, blue: 1, yellow: 2, speed: 3, missile: 4, bit: 5, bonus: 6 };
 const LETTER = { speed: 'S', missile: 'M', bit: 'B', bonus: '★' };
 
 export class Item {
@@ -61,13 +60,10 @@ export class Item {
   draw(r) {
     const f = this.type === ITEM.CRYSTAL ? FRAME[this.color] : FRAME[this.type];
     const bob = Math.sin(this.t * 0.12) * 0.8;
-    const glowCol = ['#ff3d5a', '#3d9bff', '#ffcc2e', '#45e08a', '#ff8a3d', '#c08aff', '#ffffff', '#5ff0ff'][f];
+    const glowCol = ['#ff3d5a', '#3d9bff', '#ffcc2e', '#45e08a', '#ff8a3d', '#c08aff', '#ffffff'][f];
     r.glow(this.x, this.y + bob, 13 + Math.sin(this.t * 0.2) * 2, glowCol, 0.5);
     r.spr('item', this.x, this.y + bob, f);
-    if (this.type === ITEM.SHIELD) {
-      // the badge speaks for itself; a slow sparkle marks it as precious
-      if (this.t % 40 < 6) r.glow(this.x + 3, this.y + bob - 3, 4, '#ffffff', 0.8);
-    } else if (this.type !== ITEM.CRYSTAL) {
+    if (this.type !== ITEM.CRYSTAL) {
       this.w.textAt(LETTER[this.type], this.x, this.y + bob - 3.5, '#10131c');
     } else if (!this.fixed && (this.t / 80) % 1 > 0.85 && this.t % 4 < 2) {
       r.glow(this.x, this.y + bob, 10, '#ffffff', 0.5);

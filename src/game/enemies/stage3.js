@@ -198,7 +198,7 @@ class LaserFin extends Enemy {
     if (k === cyc - 50 && this.onScreen(-20)) w.sfx('laserFire', 0.8);
     if (this.firing && this.onScreen(0)) {
       const p = w.player;
-      if (p.alive && p.invuln <= 0 && p.x < this.x && Math.abs(p.y - this.ey) < 4.5) w.killPlayer('laser');
+      if (p.alive && p.invuln <= 0 && p.x < this.x && Math.abs(p.y - this.ey) < 4.5) w.hitPlayer('laser');
     }
     if (!this.onScreen(0)) {
       this.charging = false;

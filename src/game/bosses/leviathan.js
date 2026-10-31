@@ -147,7 +147,7 @@ class Leviathan extends Boss {
       case 'fire': {
         this.beam = Math.min(1, this.st / 8);
         const m = this.mouth;
-        if (p.alive && p.invuln <= 0 && p.x < m.x && Math.abs(p.y - m.y) < 13 * this.beam) w.killPlayer('laser');
+        if (p.alive && p.invuln <= 0 && p.x < m.x && Math.abs(p.y - m.y) < 13 * this.beam) w.hitPlayer('laser');
         if (this.st % 3 === 0) w.r.shake(0.08);
         if (this.st > 80) {
           this.beam = 0;

@@ -15,7 +15,7 @@ const NODE_ANG = [Math.PI * 0.62, Math.PI * 0.86, Math.PI * 1.14, Math.PI * 1.38
 class IrisWarden extends Boss {
   constructor(w, x, y, opt) {
     super(w, x, y, { ...opt, title: 'IRIS WARDEN' });
-    this.setHp(600);
+    this.setHp(480);
     this.score = 50000;
     this.x = w.camX + W + 120;
     this.y = PH / 2;
@@ -80,7 +80,7 @@ class IrisWarden extends Boss {
       const pts = this.armPoints(arm);
       for (let i = 1; i < pts.length; i++) b.push({ x: pts[i][0], y: pts[i][1], hw: 5, hh: 5, type: 'armor' });
     }
-    if (this.aperture > 34) b.push({ x: this.x, y: this.y, hw: 17, hh: 17, type: 'weak', mul: 1 });
+    if (this.aperture > 34) b.push({ x: this.x, y: this.y, hw: 19, hh: 19, type: 'weak', mul: 1 });
     else b.push({ x: this.x, y: this.y, hw: 44, hh: 44, type: 'shield', touch: true, podPierce: false });
     // ring segments (touch-lethal armour)
     for (let i = 0; i < 12; i++) {
@@ -144,7 +144,7 @@ class IrisWarden extends Boss {
       n.aim = Math.atan2(p.y - np.y, p.x - np.x);
       if (--n.cool <= 0) {
         const burst = ph >= 2 ? 3 : 2;
-        n.cool = Math.round((ph >= 3 ? 70 : 100) * w.diff.fire) + Math.floor(frand(0, 30));
+        n.cool = Math.round((ph >= 3 ? 85 : 125) * w.diff.fire) + Math.floor(frand(0, 30));
         for (let k = 0; k < burst; k++) {
           w.after(k * 7, () => {
             if (n.dead || this.dying) return;
@@ -162,7 +162,7 @@ class IrisWarden extends Boss {
           for (const s of [-1, 1]) w.spawn('blade', this.x - 40, this.y + s * 46, { a: Math.PI + s * 0.6 });
           w.sfx('spawn');
         }
-        if (this.st > 220 * fast) {
+        if (this.st > 170 * fast) {
           this.setState('opening');
           w.sfx('coreOpen');
         }
@@ -179,7 +179,7 @@ class IrisWarden extends Boss {
       }
       case 'spiral': {
         this.aperture = 50;
-        const every = ph >= 3 ? 4 : 5;
+        const every = ph >= 3 ? 5 : 6;
         if (this.st % every === 0 && this.st < 190) {
           const arms = ph >= 2 ? 3 : 2;
           for (let k = 0; k < arms; k++) {
@@ -240,7 +240,7 @@ class IrisWarden extends Boss {
     const along = px * dx + py * dy;
     if (along > 0) {
       const perp = Math.abs(px * dy - py * dx);
-      if (perp < 6 && p.alive && p.invuln <= 0) w.killPlayer('laser');
+      if (perp < 6 && p.alive && p.invuln <= 0) w.hitPlayer('laser');
     }
     // impact sparks where the beam hits terrain
     const T = w.terrain;

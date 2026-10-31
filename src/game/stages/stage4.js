@@ -72,6 +72,11 @@ export function stage4() {
   // ---------------------------------------------------------------- boss
   at(5300, (w) => w.startBoss('anvil', { title: 'ANVIL', music: 'boss' }));
 
+  // ---------------------------------------------------------------- shield capsules
+  at(900, (w) => w.spawnR('carrier', 20, 100, { fly: true, drop: ITEM.SHIELD }));
+  at(2300, (w) => w.spawnR('carrier', 20, 112, { fly: true, drop: ITEM.SHIELD }));
+  at(4700, (w) => w.spawnR('carrier', 20, 110, { fly: true, drop: ITEM.SHIELD }));
+
   return {
     index: 3,
     name: { en: 'FOUNDRY', ja: '鋳造炉' },

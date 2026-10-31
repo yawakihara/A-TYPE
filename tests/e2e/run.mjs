@@ -187,6 +187,68 @@ await run('title boots', 'frames=30', (r) => (r.scene === 'TitleScene' ? [] : [`
   for (const p of problems) console.log(`      ${p}`);
   await page.close();
 }
+// shield: 3 per life, each hit (bullet, enemy, terrain) costs one, a hit at 0 is a miss, capsules add
+// one without limit, the loadout and shield carry into the next stage, OPTIONS can switch it off
+{
+  const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${base}/index.html?stage=1&cp=1&frames=1`);
+  await page.waitForFunction(() => document.title === 'done', null, { timeout: 60000 });
+  const r = await page.evaluate(() => {
+    const g = window.__AL;
+    const out = [];
+    const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(); };
+    let w = g.scene.world;
+    let p = w.player;
+    const ready = () => { w.bullets.clear(); w.enemies.length = 0; w.hitstop = 0; w.slowmo = 0; p.invuln = 0; p.shieldT = 0; };
+    const shoot = () => { ready(); w.bullets.spawn(p.x, p.y, 0, 0, 'orb'); step(1); };
+    step(60);
+    ready();
+    p.shield = 3;
+    out.push(`start:${p.shield}`);
+    shoot();
+    out.push(`bullet:${p.shield}/${p.alive}`);
+    ready();
+    w.spawn('wisp', p.x + 2, p.y, {});
+    step(2);
+    out.push(`enemy:${p.shield}/${p.alive}`);
+    ready();
+    p.y = w.terrain.floorAt(p.x) - 1;
+    step(1);
+    out.push(`terrain:${p.shield}/${p.alive}/${w.terrain.hitBox(p.x - 1, p.y + 0.5, 11, 3.6) ? 'stuck' : 'clear'}`);
+    shoot();
+    out.push(`fatal:${p.alive}`);
+    for (let i = 0; i < 400 && w.phase !== 'play'; i++) step(1);
+    out.push(`respawn:${w.player.shield}`);
+    p = w.player;
+    for (let i = 0; i < 5; i++) w.collect({ type: 'shield' });
+    out.push(`capsules:${p.shield}`);
+    w.collect({ type: 'crystal', color: 'red' });
+    for (let i = 0; i < 400 && !(w.pod && w.pod.attached); i++) step(1);
+    g.scene.session.carry = w.captureCarry();
+    g.scene.startStage(1);
+    w = g.scene.world;
+    out.push(`next-stage:${w.player.shield}/${w.pod && w.pod.state}`);
+    g.cfg.shield = false;
+    g.scene.startStage(0, 1);
+    w = g.scene.world;
+    p = w.player;
+    step(60);
+    out.push(`off:${p.shield}`);
+    shoot();
+    out.push(`off-hit:${p.alive}`);
+    g.cfg.shield = true;
+    return out;
+  });
+  const expect = ['start:3', 'bullet:2/true', 'enemy:1/true', 'terrain:0/true/clear', 'fatal:false', 'respawn:3', 'capsules:8', 'next-stage:8/front', 'off:0', 'off-hit:false'];
+  const problems = [...errors];
+  for (const e of expect) if (!r.includes(e)) problems.push(`expected "${e}" in ${JSON.stringify(r)}`);
+  if (problems.length) failed++;
+  console.log(`${problems.length ? 'FAIL' : 'PASS'}  shield: hits, miss at 0, capsules without limit, carry-over, OFF  ${JSON.stringify(r)}`);
+  for (const p of problems) console.log(`      ${p}`);
+  await page.close();
+}
 // every menu / UI scene renders in both graphics modes and both languages without errors
 for (const sc of ['menu', 'options', 'music', 'records', 'howto', 'credits', 'stages', 'difficulty', 'prologue', 'demo', 'ending']) {
   for (const [mode, lang] of [['hd', 'en'], ['arcade', 'ja']]) await run(`scene ${sc} (${mode}/${lang})`, `scene=${sc}&mode=${mode}&lang=${lang}&frames=240`, null, 60000);

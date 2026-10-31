@@ -182,6 +182,7 @@ export class OptionsScene extends Screen {
       { label: () => L('musicVol'), ...vol('music') },
       { label: () => L('sfxVol'), ...vol('sfx') },
       { label: () => L('shake'), value: () => (c.reduceFx ? L('reduced') : L('full')), left: () => ((c.reduceFx = !c.reduceFx), apply()), right: () => ((c.reduceFx = !c.reduceFx), apply()) },
+      { label: () => L('shieldOpt'), value: () => (c.shield !== false ? L('on') : L('shieldOff')), left: () => ((c.shield = c.shield === false), apply()), right: () => ((c.shield = c.shield === false), apply()) },
       { label: () => L('language'), value: () => (c.lang === 'ja' ? '日本語' : 'ENGLISH'), left: () => ((c.lang = c.lang === 'ja' ? 'en' : 'ja'), apply()), right: () => ((c.lang = c.lang === 'ja' ? 'en' : 'ja'), apply()) },
       { label: () => L('fullscreen'), select: () => g.toggleFullscreen() },
       {
@@ -211,8 +212,8 @@ export class OptionsScene extends Screen {
     const g = this.game;
     this.drawBase(r);
     header(r, g, g.L(STR.options));
-    panel(r, 52, 46, W - 104, 162);
-    this.menu.draw(r, W / 2, 52, { lh: 14, size: 9, minW: W - 120 });
+    panel(r, 52, 46, W - 104, 166);
+    this.menu.draw(r, W / 2, 52, { lh: 13.2, size: 9, minW: W - 120 });
     footer(r, g, g.L(STR.hintMenu));
     fadeIn(r, this.t, 12);
   }

@@ -25,20 +25,21 @@ import '../../src/game/bosses/mother.js';
 /** A stand-in world that accepts any call and records what the timeline spawns. */
 function recordingWorld() {
   const spawned = [];
+  const drops = [];
   const any = new Proxy(function () {}, {
     get: (t, p) => (p === Symbol.toPrimitive ? () => 0 : any),
     apply: () => any,
   });
   const w = new Proxy({}, {
     get(t, p) {
-      if (p === 'spawn' || p === 'spawnR') return (name) => (spawned.push(name), any);
+      if (p === 'spawn' || p === 'spawnR') return (name, x, y, opt) => (spawned.push(name), opt && opt.drop && drops.push(opt.drop), any);
       if (p === 'startBoss') return (name) => spawned.push(name);
       if (p === 'after') return (n, fn) => fn();
       if (p === 'camX' || p === 't') return 0;
       return any;
     },
   });
-  return { w, spawned };
+  return { w, spawned, drops };
 }
 
 test('six stages with sane checkpoints, names and music', () => {
@@ -67,6 +68,15 @@ test('every enemy and boss a stage timeline spawns is registered, and each stage
     const unknown = [...new Set(spawned)].filter((n) => !REGISTRY.has(n));
     assert.deepEqual(unknown, [], `stage ${i + 1} unknown spawns`);
     assert.ok(spawned.includes(bosses[i]), `stage ${i + 1} boss ${bosses[i]}`);
+  });
+});
+
+test('every stage hands out at least three shield capsules', () => {
+  STAGES.forEach((make, i) => {
+    const st = make();
+    const { w, drops } = recordingWorld();
+    for (const e of st.events) if (e.fn) e.fn(w);
+    assert.ok(drops.filter((d) => d === 'shield').length >= 3, `stage ${i + 1} shield capsules`);
   });
 });
 

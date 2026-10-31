@@ -67,6 +67,11 @@ export function stage5() {
   // ---------------------------------------------------------------- boss
   at(4960, (w) => w.startBoss('wyrm', { title: 'COIL WYRM', music: 'boss' }));
 
+  // ---------------------------------------------------------------- shield capsules
+  at(800, (w) => w.spawnR('carrier', 20, 116, { fly: true, drop: ITEM.SHIELD }));
+  at(2300, (w) => w.spawnR('carrier', 20, 114, { fly: true, drop: ITEM.SHIELD }));
+  at(4500, (w) => w.spawnR('carrier', 20, 116, { fly: true, drop: ITEM.SHIELD }));
+
   return {
     index: 4,
     name: { en: "SERPENT'S COIL", ja: '大蛇の螺旋' },

@@ -106,6 +106,11 @@ export function stage1() {
   // ---------------------------------------------------------------- boss
   at(5660, (w) => w.startBoss('iris', { title: 'IRIS WARDEN', music: 'boss' }));
 
+  // ---------------------------------------------------------------- shield capsules
+  at(1000, (w) => w.spawnR('carrier', 20, 100, { fly: true, drop: ITEM.SHIELD }));
+  at(3000, (w) => w.spawnR('carrier', 20, 112, { fly: true, drop: ITEM.SHIELD }));
+  at(5150, (w) => w.spawnR('carrier', 20, 112, { fly: true, drop: ITEM.SHIELD }));
+
   return {
     index: 0,
     name: { en: 'DERELICT GATE', ja: '朽ちた関門' },

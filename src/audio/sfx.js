@@ -159,6 +159,34 @@ export const SFX = {
     m.stop(t + 0.5);
     rev(eng, b, 0.4);
   },
+  shieldHit(eng, t) {
+    // the shield takes the blow: crackle of energy and a falling metallic ring
+    const a = g(eng, t, 0.22, 0.001, 0.28);
+    nz(eng, t, 0.28, a, 'bandpass', 5200, 700, 1.4);
+    const b = g(eng, t, 0.14, 0.002, 0.22);
+    o(eng, arc(eng) ? 'pulse' : 'square', 980, 260, t, 0.22, b);
+    const c = g(eng, t + 0.02, 0.08, 0.002, 0.6);
+    const ring = o(eng, 'sine', 1560, 1180, t + 0.02, 0.6, c);
+    const m = eng.ctx.createOscillator();
+    m.frequency.value = 1560 * 1.5;
+    const mg = eng.ctx.createGain();
+    mg.gain.value = 700;
+    m.connect(mg);
+    mg.connect(ring.frequency);
+    m.start(t + 0.02);
+    m.stop(t + 0.65);
+    rev(eng, c, 0.45);
+  },
+  shieldUp(eng, t) {
+    // shield capsule: a bright rising shimmer
+    [0, 7, 12, 19, 24].forEach((s, i) => {
+      const a = g(eng, t + i * 0.04, 0.07, 0.003, 0.3);
+      o(eng, arc(eng) ? 'pulse' : 'triangle', 587 * 2 ** (s / 12), 587 * 2 ** (s / 12) * 1.02, t + i * 0.04, 0.3, a);
+      rev(eng, a, 0.4);
+    });
+    const w = g(eng, t, 0.05, 0.08, 0.35);
+    nz(eng, t, 0.42, w, 'bandpass', 1200, 6000, 2);
+  },
   podSummon(eng, t) {
     [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => {
       const a = g(eng, t + i * 0.045, 0.06, 0.003, 0.4);
